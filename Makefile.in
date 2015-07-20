@@ -1,0 +1,63 @@
+.PHONY: regressions amalgamated clean distribution
+
+include @BUILD_DIR@/build/bcd.build
+
+
+
+
+all:
+	$(MAKE) -C src all
+
+amalgamated:
+	$(MAKE) -C src amalgamated
+
+regressions: amalgamated
+	$(MAKE) -C regressions all
+
+install-headers:
+	mkdir -p $(HEADERS) || exit
+	cp $(SRC_DIR)/include/bcd.h $(HEADERS) || exit
+	chmod 644 $(HEADERS)/bcd.h || exit
+
+install-so:
+	mkdir -p $(LIBRARY)
+	cp $(SRCDIR)/libbcd.so $(LIBRARY)/$(LDNAME_VERSION)
+	ln -sf $(LDNAME_VERSION) $(LIBRARY)/$(LDNAME)
+	ln -sf $(LDNAME_VERSION) $(LIBRARY)/$(LDNAME_MAJOR)
+	chmod 744 $(LIBRARY)/$(LDNAME_VERSION)		\
+	    $(LIBRARY)/$(LDNAME)				\
+	    $(LIBRARY)/$(LDNAME_MAJOR)
+
+install-lib:
+	mkdir -p $(LIBRARY)
+	cp $(SRCDIR)/libbcd.a $(LIBRARY)/libbcd.a
+	chmod 644 $(LIBRARY)/libbcd.a
+
+install: all install-headers @INSTALL_LIBS@
+	mkdir -p $(LIBRARY) || exit
+	mkdir -p $(PKGCONFIG_DATA) || exit
+	chmod 755 $(PKGCONFIG_DATA)
+	cp $(BUILD_DIR)/build/bcd.pc $(PKGCONFIG_DATA)/bcd.pc || exit
+	@echo
+	@echo
+	@echo ---[ BCD has installed successfully.
+
+uninstall:
+	rm -f $(LIBRARY)/$(LDNAME_VERSION)	\
+	    $(LIBRARY)/$(LDNAME)		\
+	    $(LIBRARY)/$(LDNAME_MAJOR)
+	rm -f $(LIBRARY)/libbcd.so*		\
+	    $(LIBRARY)/libbcd.a
+	rm -f $(HEADERS)/bcd.h
+
+dist:
+	git archive --remote=$(SRC_DIR) --format=tar --prefix=bcd-$(VERSION)/ HEAD \
+	    | gzip > $(BUILD_DIR)/bcd-$(VERSION).tar.gz
+
+distclean: clean
+	rm -f $(BUILD_DIR)/Makefile
+	rm -f $(BUILD_DIR)/build/bcd.pc
+	rm -f $(BUILD_DIR)/build/bcd.build
+
+clean:
+	$(MAKE) -C src clean

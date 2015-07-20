@@ -1,0 +1,51 @@
+.PHONY: clean distribution
+
+include @BUILD_DIR@/build/bcd.build
+
+TARGET_DIR=$(BUILD_DIR)/src
+SDIR=$(SRC_DIR)/src
+INCLUDE_DIR=$(SRC_DIR)/include
+HEADERS=$(INCLUDE_DIR)/*.h $(INCLUDE_DIR)/internal/*.h
+
+OBJECTS=bcd.o		\
+	cf.o		\
+	io.o		\
+	io/linux.o	\
+	os/linux.o
+
+all: $(ALL_LIBS)
+
+amalgamated: $(TARGET_DIR)/bcd-amalgamated.c
+
+$(TARGET_DIR)/bcd-amalgamated.c: $(HEADERS) $(SDIR)/bcd.c $(SDIR)/cf.c $(SDIR)/io.c $(SDIR)/*/*.c
+	echo '#define BCD_AMALGAMATED' > $(TARGET_DIR)/bcd-amalgamated.c
+	cat $(HEADERS) $(SDIR)/bcd.c $(SDIR)/cf.c $(SDIR)/io.c $(SDIR)/*/*.c >> $(TARGET_DIR)/bcd-amalgamated.c
+
+libbcd.so: $(OBJECTS)
+	$(LD) $(LDFLAGS) -o $(TARGET_DIR)/libbcd.so $(OBJECTS)
+
+libbcd.a: $(OBJECTS)
+	ar rcs $(TARGET_DIR)/libbcd.a $(OBJECTS)
+
+bcd.o: $(SDIR)/bcd.c $(HEADERS)
+	$(CC) $(CFLAGS) -c -o $(TARGET_DIR)/bcd.o $(SDIR)/bcd.c
+
+cf.o: $(SDIR)/cf.c $(HEADERS)
+	$(CC) $(CFLAGS) -c -o $(TARGET_DIR)/cf.o $(SDIR)/cf.c
+
+io.o: $(SDIR)/io.c $(HEADERS)
+	$(CC) $(CFLAGS) -c -o $(TARGET_DIR)/io.o $(SDIR)/io.c
+
+io/linux.o: $(SDIR)/io/linux.c $(HEADERS)
+	$(CC) $(CFLAGS) -c -o $(TARGET_DIR)/io/linux.o $(SDIR)/io/linux.c
+
+os/linux.o: $(SDIR)/os/linux.c $(HEADERS)
+	$(CC) $(CFLAGS) -c -o $(TARGET_DIR)/os/linux.o $(SDIR)/os/linux.c
+
+distribution: clean
+	rm -f $(TARGET_DIR)/Makefile
+
+clean:
+	rm -rf $(TARGET_DIR)/*.dSYM $(TARGET_DIR)/*~ $(TARGET_DIR)/*.o \
+	    $(OBJECTS) $(TARGET_DIR)/libbcd.a $(TARGET_DIR)/libbcd.so \
+	    $(TARGET_DIR)/bcd-amalgamated.c

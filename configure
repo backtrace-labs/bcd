@@ -1,0 +1,537 @@
+#!/bin/sh
+#
+# Copyright © 2009-2013 Samy Al Bahra.
+# Copyright © 2011 Devon H. O'Dell <devon.odell@gmail.com>
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+#
+# THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+# OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+# LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+# OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+# SUCH DAMAGE.
+#
+
+REQUIRE_HEADER="sys/socket.h sys/types.h sys/un.h fcntl.h stdint.h string.h"
+
+EXIT_SUCCESS=0
+EXIT_FAILURE=1
+WANT_PIC=yes
+
+P_PWD=`pwd`
+MAINTAINER='sbahra@backtrace.io'
+VERSION=${VERSION:-'1.0'}
+VERSION_MAJOR='0'
+BUILD="$PWD/build/bcd.build"
+PREFIX=${PREFIX:-"/usr/local"}
+LDNAME="libbcd.so"
+LDNAME_VERSION="libbcd.so.$VERSION"
+LDNAME_MAJOR="libbcd.so.$VERSION_MAJOR"
+
+OPTION_CHECKING=1
+
+export CFLAGS
+export PREFIX
+LC_ALL=C
+export LC_ALL
+
+if test -n "${BASH_VERSION+set}" && (set -o posix) >/dev/null 2>&1; then
+	set -o posix
+fi
+
+trap epilog 1 2 3 6
+
+epilog()
+{
+	rm -f .1.c .1
+}
+
+assert()
+{
+
+	if test "$#" -eq 2; then
+		fail=$2
+		print=true
+	elif test "$#" -eq 3; then
+		fail=$3
+		print=echo
+	else
+		echo "Usage: assert <test> <fail string> or assert <test> <success string> <fail string>" 1>&2
+		exit $EXIT_FAILURE
+	fi
+
+	if test -z "$1"; then
+		echo "failed  [$fail]"
+		exit $EXIT_FAILURE
+	else
+		${print} "success [$1]"
+	fi
+}
+
+generate()
+{
+	sed -e "s#@VERSION@#$VERSION#g"				\
+	    -e "s#@VERSION_MAJOR@#$VERSION_MAJOR#g"		\
+	    -e "s#@CC@#$CC#g"					\
+	    -e "s#@CFLAGS@#$CFLAGS#g"				\
+	    -e "s#@HEADERS@#$HEADERS#g"				\
+	    -e "s#@LIBRARY@#$LIBRARY#g"				\
+	    -e "s#@PREFIX@#$PREFIX#g"				\
+	    -e "s#@ALL_LIBS@#$ALL_LIBS#g"			\
+	    -e "s#@INSTALL_LIBS@#$INSTALL_LIBS#g"		\
+	    -e "s#@LD@#$LD#g"					\
+	    -e "s#@LDFLAGS@#$LDFLAGS#g"				\
+	    -e "s#@PTHREAD_CFLAGS@#$PTHREAD_CFLAGS#g"		\
+	    -e "s#@MANDIR@#$MANDIR#g"				\
+	    -e "s#@GZIP@#$GZIP#g"				\
+	    -e "s#@GZIP_SUFFIX@#$GZIP_SUFFIX#g"			\
+	    -e "s#@BUILD_DIR@#$P_PWD#g"				\
+	    -e "s#@SRC_DIR@#$BUILD_DIR#g"			\
+	    -e "s#@LDNAME@#$LDNAME#g"				\
+	    -e "s#@LDNAME_MAJOR@#$LDNAME_MAJOR#g"		\
+	    -e "s#@LDNAME_VERSION@#$LDNAME_VERSION#g"		\
+		$1 > $2
+}
+
+generate_stdout()
+{
+
+	echo
+	echo "           VERSION = $VERSION"
+	echo "         BUILD_DIR = $P_PWD"
+	echo "           SRC_DIR = $BUILD_DIR"
+	echo "            SYSTEM = $SYSTEM"
+	echo "                CC = $CC"
+	echo "          COMPILER = $COMPILER"
+	echo "            CFLAGS = $CFLAGS"
+	echo "    PTHREAD_CFLAGS = $PTHREAD_CFLAGS"
+	echo "                LD = $LD"
+	echo "            LDNAME = $LDNAME"
+	echo "    LDNAME_VERSION = $LDNAME_VERSION"
+	echo "      LDNAME_MAJOR = $LDNAME_MAJOR"
+	echo "           LDFLAGS = $LDFLAGS"
+	echo "              GZIP = $GZIP"
+	echo
+	echo "Headers will be installed in $HEADERS"
+	echo "Libraries will be installed in $LIBRARY"
+	echo "Documentation will be installed in $MANDIR"
+}
+
+for option; do
+	case "$option" in
+	*=?*)
+		value=`expr -- "$option" : '[^=]*=\(.*\)'`
+		;;
+	*=)
+		value=
+		;;
+	*)
+		value=yes
+		;;
+	esac
+
+	case "$option" in
+	--help)
+		echo "Usage: $0 [OPTIONS]"
+		echo
+		echo "The following options may be used for cross-building."
+		echo "  --profile=N              Use custom build profile (use in conjunction with \$CC)"
+		echo
+		echo "The following options may be used to modify installation behavior."
+		echo "  --includedir=N           Headers directory (default is ${PREFIX}/include)"
+		echo "  --libdir=N               Libraries directory (default is ${PREFIX}/lib)"
+		echo "  --mandir=N               Manual pages directory (default is ${PREFIX}/man)"
+		echo "  --prefix=N               Installs library files in N (default is $PREFIX)"
+		echo
+		echo "The following environment variables may be used:"
+		echo "   CC       C compiler command"
+		echo "   CFLAGS   C compiler flags"
+		echo "   LDFLAGS  Linker flags"
+		echo "   GZIP     GZIP compression tool"
+		echo
+		echo "Report bugs to ${MAINTAINER}."
+		exit $EXIT_SUCCESS
+		;;
+	--prefix=*)
+		PREFIX=$value
+		;;
+	--includedir=*)
+		HEADERS=$value
+		;;
+	--libdir=*)
+		LIBRARY=$value
+		;;
+	--mandir=*)
+		MANDIR=$value
+		;;
+	--with-pic)
+		WANT_PIC=yes
+		;;
+	--without-pic)
+		WANT_PIC=no
+		;;
+	--disable-option-checking)
+		OPTION_CHECKING=0
+		;;
+	--build=*|--host=*|--target=*|--exec-prefix=*|--bindir=*|--sbindir=*|\
+	--sysconfdir=*|--datadir=*|--libexecdir=*|--localstatedir=*|\
+	--enable-static|\
+	--sharedstatedir=*|--infodir=*|--enable-shared|--disable-shared|\
+	--cache-file=*|--srcdir=*)
+		# ignore for compat with regular configure
+		;;
+	--*)
+		if test "$OPTION_CHECKING" -eq 1; then
+			echo "$0 [--help]"
+			echo "Unknown option $option"
+			exit $EXIT_FAILURE
+		fi
+		;;
+	*=*)
+		NAME=`expr -- "$option" : '\([^=]*\)='`
+		eval "$NAME='$value'"
+		export $NAME
+		;;
+	*)
+		echo "$0 [--help]"
+		echo "Unknown option $option"
+		exit $EXIT_FAILURE
+		;;
+	esac
+done
+
+HEADERS=${HEADERS:-"${PREFIX}/include"}
+LIBRARY=${LIBRARY:-"${PREFIX}/lib"}
+MANDIR=${MANDIR:-"${PREFIX}/share/man"}
+GZIP=${GZIP:-"gzip -c"}
+
+printf "Detecting operating system......."
+SYSTEM=`uname -s 2> /dev/null`
+case "$SYSTEM" in
+	"SunOS")
+		SYSTEM=solaris
+		;;
+	"Linux"|"uClinux")
+		SYSTEM=linux
+		;;
+	"FreeBSD"|"GNU/kFreeBSD")
+		SYSTEM=freebsd
+		;;
+	"NetBSD")
+		SYSTEM=netbsd
+		;;
+	"OpenBSD")
+		SYSTEM=openbsd
+		;;
+	"DragonFly")
+		SYSTEM=dragonflybsd
+		;;
+	"Darwin")
+		SYSTEM=darwin
+		;;
+	MINGW32*)
+		SYSTEM=mingw32
+		LDFLAGS="-mthreads $LDFLAGS"
+		;;
+	*)
+		SYSTEM=
+		;;
+esac
+
+assert "$SYSTEM" "$SYSTEM" "unsupported"
+
+printf "Detecting machine architecture..."
+PLATFORM=`uname -m 2> /dev/null`
+case $PLATFORM in
+	"macppc"|"Power Macintosh"|"powerpc")
+		PLATFORM=ppc
+		ENVIRONMENT=32
+		LDFLAGS="-m32 $LDFLAGS"
+		;;
+	"sun4u"|"sun4v"|"sparc64")
+		PLATFORM=sparcv9
+		ENVIRONMENT=64
+		LDFLAGS="-m64 $LDFLAGS"
+		;;
+	i386|i486|i586|i686|i586_i686|pentium*|athlon*|k5|k6|k6_2|k6_3)
+		case $SYSTEM in
+			darwin)
+				ENVIRONMENT=64
+				PLATFORM=x86_64
+				;;
+			freebsd)
+				PLATFORM=x86
+				ENVIRONMENT=32
+
+				# FreeBSD doesn't give us a nice way to determine the CPU
+				# class of the running system, reporting any 32-bit x86
+				# architecture as i386. 486 is its minimum supported CPU
+				# class and cmpxchg8b was implemented first in i586.
+				dmesg | grep -q "486-class"
+				if test "$?" -eq 0; then
+					assert "" "" "Must have an i586 class or higher CPU"
+				fi
+
+				# FreeBSD still generates code for 486-class CPUs as its
+				# default 32-bit target, but we need 586 at the least.
+				echo "$CFLAGS" | grep -q 'march='
+				if test "$?" -ne 0; then
+					# Needed for cmpxchg8b
+					CFLAGS="$CFLAGS -march=i586"
+				fi
+				;;
+			linux)
+				case $PLATFORM in
+					i386|i486)
+						assert "" "" "Must have an i586 class or higher CPU"
+						;;
+				esac
+
+				PLATFORM=x86
+				ENVIRONMENT=32
+				;;
+
+			*)
+				PLATFORM=x86
+				ENVIRONMENT=32
+				assert "$PLATFORM $ENVIRONMENT" "$PLATFORM $ENVIRONMENT" "unsupported"
+				;;
+		esac
+		;;
+	"amd64"|"x86_64")
+		PLATFORM=x86_64
+		ENVIRONMENT=64
+		LDFLAGS="-m64 $LDFLAGS"
+		;;
+	"i86pc")
+		if test -z "$ISA"; then ISA=`isainfo -n 2> /dev/null || echo i386` ; fi
+		case "$ISA" in
+			"amd64")
+				PLATFORM=x86_64
+				ENVIRONMENT=64
+				;;
+			*)
+				PLATFORM=x86
+				ENVIRONMENT=32
+				assert "$PLATFORM $ENVIRONMENT" "$PLATFORM $ENVIRONMENT" "unsupported"
+				;;
+		esac
+		;;
+	"ppc64"|"ppc64le")
+		PLATFORM=ppc64
+		ENVIRONMENT=64
+		;;
+	arm|armv6l|armv7l)
+		PLATFORM=arm
+		ENVIRONMENT=32
+		;;
+	"aarch64")
+		PLATFORM=aarch64
+		ENVIRONMENT=64
+		;;
+	*)
+		PLATFORM=
+		;;
+esac
+
+assert "$PLATFORM" "$PLATFORM" "unsupported"
+
+# `which` on Solaris sucks
+pathsearch()
+{
+	what=$1
+	oldFS="$IFS"
+	IFS=":"
+	for d in $PATH ; do
+		if test -x "$d/$what" ; then
+			echo "$d/$what";
+			IFS="$oldFS"
+			return
+		fi
+	done
+	IFS="$oldFS"
+}
+
+printf "Finding dirname command.........."
+DIRNAME=`pathsearch "${DIRNAME:-dirname}"`
+if test -z "$DIRNAME" -o ! -x "$DIRNAME"; then
+	DIRNAME=`pathsearch "${DIRNAME:-dirname}"`
+	DIRNAME="$DIRNAME"
+else
+	echo "success [$DIRNAME]"
+fi
+
+if test -z "$DIRNAME"; then
+	echo "not found (out of source build unsupported)"
+else
+	printf "Determining build directory......"
+
+	BUILD_DIR=`$DIRNAME $0`
+	cd `$DIRNAME $0`
+	BUILD_DIR=`pwd`
+
+	echo "success [$BUILD_DIR]"
+fi
+
+printf "Finding gzip tool................"
+GZIP=`pathsearch "${GZIP:-gzip}"`
+if test -z "$GZIP" -o ! -x "$GZIP"; then
+	GZIP=`pathsearch "${GZIP:-gzip}"`
+	GZIP="$GZIP"
+fi
+
+if test -z "$GZIP"; then
+	echo "not found"
+	GZIP=cat
+	GZIP_SUFFIX=""
+else
+	echo "success [$GZIP]"
+	GZIP="$GZIP -c"
+	GZIP_SUFFIX=".gz"
+fi
+
+printf "Finding suitable compiler........"
+CC=`pathsearch "${CC:-cc}"`
+if test -z "$CC" -o ! -x "$CC"; then
+	CC=`pathsearch "${CC:-gcc}"`
+fi
+assert "$CC" "not found"
+
+cat << EOF > .1.c
+#include <stdio.h>
+int main(void) {
+#if defined(_WIN32)
+#if defined(__MINGW64__)
+	puts("mingw64");
+	return (0);
+#elif defined(__MINGW32__) && (__MINGW32_MAJOR_VERSION >= 3)
+	puts("mingw32");
+	return (0);
+#else
+	return (1);
+#endif /* __MINGW32__ && __MINGW32_MAJOR_VERSION >= 3 */
+#elif defined(__clang__) && (__clang_major__ >= 4)
+	puts("clang");
+	return (0);
+#elif defined(__SUNPRO_C) && (__SUNPRO_C >= 0x5110)
+	puts("suncc");
+	return (0);
+#elif defined(__GNUC__) && (__GNUC__ >= 4)
+	puts("gcc");
+	return (0);
+#else
+	return (1);
+#endif
+}
+EOF
+
+$CC -o .1 .1.c
+COMPILER=`./.1`
+r=$?
+rm -f .1.c .1
+
+if test "$r" -ne 0; then
+	assert "" "update compiler"
+else
+	echo "success [$CC]"
+fi
+
+if test "$COMPILER" = "suncc"; then
+	LD=/bin/ld
+	LDFLAGS="-G -z text -h libbcd.so.$VERSION_MAJOR $LDFLAGS"
+	CFLAGS="-xO5 $CFLAGS"
+	PTHREAD_CFLAGS="-mt -lpthread"
+elif test "$COMPILER" = "gcc" || test "$COMPILER" = "clang" || test "$COMPILER" = "mingw32" || test "$COMPILER" = "mingw64"; then
+	LD=$CC
+	SONAME="$LDNAME_MAJOR"
+	if test "$SYSTEM" = "darwin"; then
+		CC_WL_OPT="-install_name"
+		LDNAME="libbcd.dylib"
+		LDNAME_VERSION="libbcd.$VERSION.dylib"
+		LDNAME_MAJOR="libbcd.$VERSION_MAJOR.dylib"
+		SONAME="$LIBRARY/$LDNAME_MAJOR"
+	else
+		CC_WL_OPT="-soname"
+	fi
+
+	LDFLAGS="-Wl,$CC_WL_OPT,$SONAME $LDFLAGS"
+	if test "$WANT_PIC" = "yes"; then
+		LDFLAGS="$LDFLAGS -shared -fPIC"
+		CFLAGS="$CFLAGS -fPIC"
+		ALL_LIBS="libbcd.so libbcd.a"
+		INSTALL_LIBS="install-so install-lib"
+	else
+		LDFLAGS="$LDFLAGS -fno-PIC"
+		CFLAGS="$CFLAGS -fno-PIC"
+		ALL_LIBS="libbcd.a"
+		INSTALL_LIBS="install-lib"
+	fi
+
+	CFLAGS="-D_XOPEN_SOURCE=600 -D_GNU_SOURCE -D_BSD_SOURCE -D_DEFAULT_SOURCE -std=gnu99 -Wall -W -Wundef -Wendif-labels -Wshadow -Wpointer-arith -Wcast-align -Wwrite-strings -Wstrict-prototypes -Wmissing-prototypes -Wnested-externs -Winline -Wdisabled-optimization -fstrict-aliasing -O2 -pipe -Wno-parentheses $CFLAGS"
+	PTHREAD_CFLAGS="-pthread"
+	if test "$COMPILER" = "mingw64"; then
+		ENVIRONMENT=64
+		PLATFORM=x86_64
+	fi
+else
+	assert "" "unknown compiler"
+fi
+
+for i in $REQUIRE_HEADER; do
+	printf "Checking header file usability..."
+
+	cat << EOF > .1.c
+#include <$i>
+int main(void){return(0);}
+EOF
+	$CC -o .1 .1.c 2> /dev/null
+	hf_s=$?
+
+	rm -f .1 .1.c
+	if test $hf_s -eq 0; then
+		echo "success [$i]"
+	else
+		echo "failed  [$i]"
+		exit $EXIT_FAILURE
+	fi
+done
+
+# Platform will be used as a macro.
+PLATFORM="__${PLATFORM}__"
+
+printf "Generating build files..........."
+
+mkdir -p $P_PWD/build
+mkdir -p $P_PWD/include
+mkdir -p $P_PWD/src
+
+if test "$P_PWD" '!=' "$BUILD_DIR"; then
+	mkdir -p $P_PWD/regressions
+	cp $BUILD_DIR/regressions/Makefile.unsupported $P_PWD/regressions/Makefile &> /dev/null
+	cp $BUILD_DIR/build/bcd.build $P_PWD/build/bcd.build &> /dev/null
+fi
+
+generate src/Makefile.in $P_PWD/src/Makefile
+generate regressions/Makefile.in $P_PWD/regressions/Makefile
+generate build/bcd.build.in $P_PWD/build/bcd.build
+generate build/regressions.build.in $P_PWD/build/regressions.build
+generate build/bcd.pc.in $P_PWD/build/bcd.pc
+generate Makefile.in $P_PWD/Makefile
+touch src/*.c src/*/*.c
+rm -f $P_PWD/src/bcd-amalgamated.c
+echo "success"
+generate_stdout

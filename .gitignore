@@ -1,0 +1,12 @@
+Makefile
+build/bcd.build
+build/bcd.pc
+build/regressions.build
+regressions/broad
+src/Makefile
+src/bcd-amalgamated.c
+*.a
+*.btt
+*.o
+*.so
+

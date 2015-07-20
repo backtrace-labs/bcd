@@ -1,0 +1,10 @@
+prefix=@PREFIX@
+includedir=@HEADERS@
+libdir=@LIBRARY@
+
+Name: Backtrace Compensation Device
+Description: Simple library for invoking out-of-process tracers
+URL: http://backtrace.io/
+Version: @VERSION@
+Libs: -L${libdir} -lbcd
+Cflags: -I${includedir}
