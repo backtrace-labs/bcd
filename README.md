@@ -50,6 +50,9 @@ fatal errors, you may call `bcd_fatal`. BCD will exit and deinitialize after
 a call to `bcd_fatal`, so it is expected that your program will exit at this
 point.
 
+Credentials, permission, OOM killer interaction and more may be configured with
+the `bcd_config` data structure, please see `bcd.h` for details.
+
 ### Example
 
 ```c
@@ -81,7 +84,7 @@ main(void)
 	 * Generate a snapshot of the calling thread and upload it to
 	 * the Backtrace database. Key-value attributes will be included.
 	 */
-	bcd_throw(&bcd, "This is a non-fatal error");
+	bcd_emit(&bcd, "This is a non-fatal error");
 
 	/*
 	 * We generate a fatal error and exit immediately.
@@ -97,7 +100,7 @@ fatal:
 
 ### Limitations
 
-For ease of use, `bcd_throw` and `bcd_fatal` do not provide return values.
+For ease of use, `bcd_emit` and `bcd_fatal` do not provide return values.
 Error callbacks are used which are executed in the context of the BCD slave.
 A developer may wish to register their own callbacks if they wish to terminate
 their process due to error logging failures. BCD will never terminate the
@@ -111,7 +114,7 @@ recommended to install your own error handler to kill the process that is being
 monitored.
 
 BCD currently allocates memory in a separate process on errors, which may not
-be suitable for errors that lack overcommit.
+be suitable for systems that lack overcommit.
 
 There is currently no way to unregister handles, but that limitation will be
 addressed shortly.
@@ -120,8 +123,8 @@ addressed shortly.
 
 BCD will initialize a pipe and fork a process during `bcd_init`. This child will
 initialize a UNIX socket for per-thread communications. The pipe is used early
-in initialization to communicate configuration errors and is used fatal error
-handling. The BCD child process will fork and exec in response to trace
+in initialization to communicate configuration errors and is used for fatal
+error handling. The BCD child process will fork and exec in response to trace
 requests.
 
 All communication between the host application and BCD occurs in a synchronous
