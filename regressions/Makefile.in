@@ -8,7 +8,6 @@ INCLUDE_DIR=$(SRC_DIR)/include
 HEADERS=$(INCLUDE_DIR)/*.h $(INCLUDE_DIR)/internal/*.h
 
 CFLAGS=-Wall -O2 -pthread -ggdb -D_GNU_SOURCE -std=gnu99 -I$(INCLUDE_DIR) -lrt
-#"-gdwarf-2 -g3"
 
 PROGRAMS=broad
 
