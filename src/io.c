@@ -206,25 +206,32 @@ bcd_io_event_create(int fd, bcd_io_event_handler_t *handler, size_t payload,
 }
 
 void
-bcd_io_event_add_to_ready_list(struct bcd_io_event *event) {
+bcd_io_event_add_to_ready_list(struct bcd_io_event *event)
+{
 
 	if (!(event->flags & BCD_IO_EVENT_IN_READY_LIST)) {
 		TAILQ_INSERT_TAIL(&readyevents, event, readylink);
 		event->flags |= BCD_IO_EVENT_IN_READY_LIST;
 	}
+
+	return;
 }
 
 void
-bcd_io_event_remove_from_ready_list(struct bcd_io_event *event) {
+bcd_io_event_remove_from_ready_list(struct bcd_io_event *event)
+{
 
 	if (event->flags & BCD_IO_EVENT_IN_READY_LIST) {
 		TAILQ_REMOVE(&readyevents, event, readylink);
 		event->flags &= ~BCD_IO_EVENT_IN_READY_LIST;
 	}
+
+	return;
 }
 
 int
-bcd_io_event_ready_list_is_empty(void) {
+bcd_io_event_ready_list_is_empty(void)
+{
 
 	return TAILQ_EMPTY(&readyevents);
 }
@@ -244,6 +251,8 @@ bcd_io_event_dispatch_ready_list(void)
 		curr_event->handler(curr_event);
 		curr_event = next_event;
 	}
+
+	return;
 }
 
 static int

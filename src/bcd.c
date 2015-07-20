@@ -155,23 +155,29 @@ static int bcd_write_ack(int fd, struct bcd_session *);
 static void
 handle_sigalrm(int sig)
 {
+
 	(void)sig;
 	sigalrm_fired = 1;
+	return;
 }
 
 
 static void
 handle_sigchld(int sig)
 {
+
 	(void)sig;
 	sigchld_fired = 1;
+	return;
 }
 
 static void
 handle_sigterm(int sig)
 {
+
 	(void)sig;
 	sigterm_fired = 1;
+	return;
 }
 
 static int
@@ -700,12 +706,13 @@ bcd_execve(struct bcd_session *session, char **argv, size_t fr)
 			if (!WIFEXITED(tracer_status) &&
 			    !WIFSIGNALED(tracer_status))
 				continue;
-			if (WIFEXITED(tracer_status))
+			if (WIFEXITED(tracer_status)) {
 				if (WEXITSTATUS(tracer_status) != 0) {
 					retval = bcd_error(BCD_EVENT_TRACE,
 					    session, "tracer exited non-zero");
 					goto leave;
 				}
+			}
 			if (WIFSIGNALED(tracer_status)) {
 				retval = bcd_error(BCD_EVENT_TRACE, session,
 				    "tracer killed with signal");
