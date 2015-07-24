@@ -116,9 +116,6 @@ monitored.
 BCD currently allocates memory in a separate process on errors, which may not
 be suitable for systems that lack overcommit.
 
-There is currently no way to unregister handles, but that limitation will be
-addressed shortly.
-
 ### Design
 
 BCD will initialize a pipe and fork a process during `bcd_init`. This child will
