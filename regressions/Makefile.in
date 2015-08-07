@@ -3,8 +3,8 @@
 include @BUILD_DIR@/build/bcd.build
 
 TARGET_DIR=$(BUILD_DIR)/regressions
-SDIR=$(SRC_DIR)/regressions
-INCLUDE_DIR=$(SRC_DIR)/include
+SDIR=$(BUILD_DIR)/regressions
+INCLUDE_DIR=$(BUILD_DIR)/include
 HEADERS=$(INCLUDE_DIR)/*.h $(INCLUDE_DIR)/internal/*.h
 
 CFLAGS=-Wall -O2 -pthread -ggdb -D_GNU_SOURCE -std=gnu99 -I$(INCLUDE_DIR) -lrt
@@ -13,7 +13,7 @@ PROGRAMS=broad
 
 all: $(PROGRAMS)
 
-broad : broad.c $(SRC_DIR)/src/bcd-amalgamated.c
+broad : broad.c $(BUILD_DIR)/src/bcd-amalgamated.c
 	$(CC) -o $@ $^ $(CFLAGS)
 
 distribution: clean

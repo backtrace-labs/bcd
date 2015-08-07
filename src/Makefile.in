@@ -3,8 +3,8 @@
 include @BUILD_DIR@/build/bcd.build
 
 TARGET_DIR=$(BUILD_DIR)/src
-SDIR=$(SRC_DIR)/src
-INCLUDE_DIR=$(SRC_DIR)/include
+SDIR=$(BUILD_DIR)/src
+INCLUDE_DIR=$(BUILD_DIR)/include
 HEADERS=$(INCLUDE_DIR)/*.h $(INCLUDE_DIR)/internal/*.h
 
 OBJECTS=bcd.o		\

@@ -16,12 +16,12 @@ regressions: amalgamated
 
 install-headers:
 	mkdir -p $(HEADERS) || exit
-	cp $(SRC_DIR)/include/bcd.h $(HEADERS) || exit
+	cp $(BUILD_DIR)/include/bcd.h $(HEADERS) || exit
 	chmod 644 $(HEADERS)/bcd.h || exit
 
 install-so:
 	mkdir -p $(LIBRARY)
-	cp $(SRCDIR)/libbcd.so $(LIBRARY)/$(LDNAME_VERSION)
+	cp $(BUILD_DIR)/src/libbcd.so $(LIBRARY)/$(LDNAME_VERSION)
 	ln -sf $(LDNAME_VERSION) $(LIBRARY)/$(LDNAME)
 	ln -sf $(LDNAME_VERSION) $(LIBRARY)/$(LDNAME_MAJOR)
 	chmod 744 $(LIBRARY)/$(LDNAME_VERSION)		\
@@ -30,7 +30,7 @@ install-so:
 
 install-lib:
 	mkdir -p $(LIBRARY)
-	cp $(SRCDIR)/libbcd.a $(LIBRARY)/libbcd.a
+	cp $(BUILD_DIR)/src/libbcd.a $(LIBRARY)/libbcd.a
 	chmod 644 $(LIBRARY)/libbcd.a
 
 install: all install-headers @INSTALL_LIBS@
@@ -51,7 +51,7 @@ uninstall:
 	rm -f $(HEADERS)/bcd.h
 
 dist:
-	git archive --remote=$(SRC_DIR) --format=tar --prefix=bcd-$(VERSION)/ HEAD \
+	git archive --remote=$(BUILD_DIR) --format=tar --prefix=bcd-$(VERSION)/ HEAD \
 	    | gzip > $(BUILD_DIR)/bcd-$(VERSION).tar.gz
 
 distclean: clean
