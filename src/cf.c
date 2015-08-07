@@ -1,7 +1,9 @@
 #include <assert.h>
 #include <string.h>
 
+#ifndef BCD_AMALGAMATED
 #include "internal.h"
+#endif /* !BCD_AMALGAMATED */
 
 struct bcd_config_internal bcd_config;
 

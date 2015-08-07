@@ -25,7 +25,9 @@
 #include <sys/syscall.h>
 #endif /* __linux__ */
 
+#ifndef BCD_AMALGAMATED
 #include "internal.h"
+#endif /* !BCD_AMALGAMATED */
 
 #define BCD_MAGIC(N) \
 	bcd_MAGICAL_UNICORNS_##N

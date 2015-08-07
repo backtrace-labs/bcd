@@ -7,7 +7,9 @@
 #include <sys/types.h>
 #include <sys/un.h>
 
+#ifndef BCD_AMALGAMATED
 #include "internal.h"
+#endif /* !BCD_AMALGAMATED */
 
 #ifndef BCD_IO_NEVENT
 #define BCD_IO_NEVENT 128

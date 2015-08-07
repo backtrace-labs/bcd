@@ -10,7 +10,9 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
+#ifndef BCD_AMALGAMATED
 #include "internal.h"
+#endif /* !BCD_AMALGAMATED */
 
 time_t
 bcd_os_time(void)
