@@ -63,11 +63,16 @@ the `bcd_config` data structure, please see `bcd.h` for details.
 int
 main(void)
 {
+	struct bcd_config config;
 	bcd_error_t error;
 	bcd_t bcd;
 
+	/* Initialize BCD configuration. See bcd.h for options */
+	if (bcd_config_init(&config, &error) == -1)
+		goto fatal;
+
 	/* Initialize the library. */
-	if (bcd_init(&error) == -1)
+	if (bcd_init(&config, &error) == -1)
 		goto fatal;
 
 	/* Initialize a handle to BCD. */
