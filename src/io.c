@@ -203,6 +203,7 @@ bcd_io_event_create(int fd, bcd_io_event_handler_t *handler, size_t payload,
 	event->mask = 0;
 	event->handler = handler;
 	event->fd = fd;
+	event->flags = 0;
 
 	return event;
 }
