@@ -19,7 +19,7 @@ static TAILQ_HEAD(, bcd_io_event) readyevents =
     TAILQ_HEAD_INITIALIZER(readyevents);
 
 struct bcd_io_listener {
-	const char *path;
+	char *path;
 	int fd;
 };
 
@@ -417,7 +417,7 @@ bcd_io_listener_unix(const char *path, int backlog, bcd_error_t *error)
 	return listener;
 
 error:
-	free((char *)listener->path);
+	free(listener->path);
 	free(listener);
 	return NULL;
 }

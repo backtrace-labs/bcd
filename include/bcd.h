@@ -25,6 +25,11 @@
 
 #if !defined(__linux__)
 #error "Unsupported platform."
+#else
+/* Needed for asprintf */
+# ifndef _GNU_SOURCE
+#  define _GNU_SOURCE
+# endif
 #endif /* __linux__ */
 
 #ifdef __cplusplus

@@ -194,8 +194,10 @@ typedef struct bcd_config_v1 bcd_config_latest_version_t;
 /*
  * Initializes a bcd_config configuration struct based on the specified version.
  */
+#ifndef BCD_AMALGAMATED
 int bcd_config_init_internal(struct bcd_config *,
     unsigned int, bcd_error_t *);
+#endif
 
 /*
  * Assigns a versioned configuration to our internal configuration.
