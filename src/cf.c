@@ -80,9 +80,9 @@ int
 bcd_config_assign(const void *cf, struct bcd_error *e)
 {
 	/* All versions of bcd_config must start with unsigned int version. */
-	unsigned int version = *(unsigned int *)cf;
+	const struct bcd_config *bcd_cf = cf;
 
-	switch (version) {
+	switch (bcd_cf->version) {
 	case 1:
 		return bcd_config_assign_from_v1(cf, e);
 	default:

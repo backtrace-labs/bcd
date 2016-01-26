@@ -617,7 +617,8 @@ bcd_abort(void)
 }
 
 static pid_t
-vfork_tracer(char **argv) {
+vfork_tracer(char **argv)
+{
 	pid_t tracer_pid;
 
 	tracer_pid = vfork();
@@ -749,15 +750,18 @@ leave:
 static int
 bcd_backtrace_thread(struct bcd_session *session)
 {
+	union {
+		char *argv[BCD_ARGC_LIMIT];
+		const char *cargv[BCD_ARGC_LIMIT];
+	} u;
 	bcd_error_t error;
-	char *argv[BCD_ARGC_LIMIT];
 	char *tp = NULL;;
 	pid_t tid = session->tid;
 	ssize_t r;
 	size_t delta = 2;
 
-	argv[0] = (char *)bcd_config.invoke.path;
-	argv[1] = bcd_target_process;
+	u.cargv[0] = bcd_config.invoke.path;
+	u.cargv[1] = bcd_target_process;
 
 	if (bcd_config.invoke.tp != NULL) {
 		if (asprintf(&tp, "%s%ju", bcd_config.invoke.tp,
@@ -766,10 +770,10 @@ bcd_backtrace_thread(struct bcd_session *session)
 			    "failed to construct tracer string");
 		}
 
-		argv[delta++] = tp;
+		u.argv[delta++] = tp;
 	}
 
-	r = bcd_kv_get(&argv[delta], sizeof(argv) / sizeof(*argv) - delta,
+	r = bcd_kv_get(&(u.argv[delta]), sizeof(u.argv) / sizeof(*u.argv) - delta,
 	    bcd_config.invoke.separator,
 	    bcd_config.invoke.ks,
 	    bcd_config.invoke.kp, &error);
@@ -779,29 +783,32 @@ bcd_backtrace_thread(struct bcd_session *session)
 		    error.message);
 	}
 
-	argv[r + delta] = NULL;
-	return bcd_execve(session, argv, delta - (tp != NULL));
+	u.argv[r + delta] = NULL;
+	return bcd_execve(session, u.argv, delta - (tp != NULL));
 }
 
 static int
 bcd_backtrace_process(struct bcd_session *session)
 {
+	union {
+		char *argv[BCD_ARGC_LIMIT];
+		const char *cargv[BCD_ARGC_LIMIT];
+	} u;
 	bcd_error_t error;
-	char *argv[BCD_ARGC_LIMIT];
 	ssize_t r;
 
-	argv[0] = (char *)bcd_config.invoke.path;
-	argv[1] = bcd_target_process;
+	u.cargv[0] = strdup(bcd_config.invoke.path);
+	u.cargv[1] = bcd_target_process;
 
-	r = bcd_kv_get(argv + 2, sizeof(argv) / sizeof(*argv) - 3,
+	r = bcd_kv_get(u.argv + 2, sizeof(u.argv) / sizeof(*u.argv) - 3,
 	    bcd_config.invoke.separator,
 	    bcd_config.invoke.ks,
 	    bcd_config.invoke.kp, &error);
 	if (r == -1)
 		return bcd_error(BCD_EVENT_TRACE, session, error.message);
 
-	argv[r + 2] = NULL;
-	return bcd_execve(session, argv, 2);
+	u.argv[r + 2] = NULL;
+	return bcd_execve(session, u.argv, 2);
 }
 
 static int
@@ -1466,8 +1473,7 @@ bcd_init(const struct bcd_config *cf, bcd_error_t *error)
 		    BCD_CONFIG_VERSION,
 		    &noerror);
 		assert(ret == 0);
-		ret = bcd_config_assign((struct bcd_config *)&default_config,
-		    &noerror);
+		ret = bcd_config_assign(&default_config, &noerror);
 		assert(ret == 0);
 	} else {
 		ret = bcd_config_assign(cf, error);
