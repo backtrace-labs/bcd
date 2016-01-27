@@ -252,6 +252,13 @@ void bcd_emit(const bcd_t *, volatile const char *);
  */
 void bcd_fatal(volatile const char *);
 
+/*
+ * Associate a new tid with this session. This is useful when attaching in a
+ * single thread at start-up and switching to some currently unknown thread at
+ * a later time (such as when it faults).
+ */
+int bcd_associate_tid(const bcd_t *, bcd_error_t *error, pid_t tid);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

@@ -135,6 +135,14 @@ static union {
 #define BCD_PACKET(P)	      (&(P)->packet)
 #define BCD_PACKET_PAYLOAD(P) ((void *)((P)->payload))
 
+/*
+ * BCD_PACKET_SIZE should only be called when BCD_PACKET_INSTANCE is invoked
+ * with a non-zero argument. It should be used for static lengths in the same
+ * context one would use sizeof (*ptr) (instead of baking the type into the
+ * code).
+ */
+#define BCD_PACKET_SIZE(P)    (sizeof ((P)->payload))
+
 enum bcd_session_state {
 	BCD_SESSION_READING,
 	BCD_SESSION_WRITING
@@ -1351,12 +1359,44 @@ bcd_os_fork(void)
 }
 
 int
+bcd_associate_tid(const struct bcd *bcd, bcd_error_t *error, pid_t tid)
+{
+	pid_t *newtid;
+	BCD_PACKET_INSTANCE(sizeof(*newtid)) packet;
+	ssize_t r;
+	time_t timeout_abstime = bcd_os_time() + bcd_config.timeout;
+
+	if (bcd->fd == -1) {
+		bcd_error_set(error, errno,
+		    "invalid fd; did you call bcd_attach?");
+		return -1;
+	}
+
+	newtid = BCD_PACKET_PAYLOAD(&packet);
+	*newtid = tid;
+
+	BCD_PACKET(&packet)->op = BCD_OP_TID;
+
+	r = bcd_packet_write(bcd->fd, BCD_PACKET(&packet), BCD_PACKET_SIZE(&packet),
+	    timeout_abstime);
+	if (r == -1) {
+		bcd_error_set(error, errno, "failed to set new tid");
+		return -1;
+	}
+
+	if (bcd_channel_read_ack(bcd->fd, timeout_abstime, error) != 0)
+		return -1;
+
+	return 0;
+}
+
+int
 bcd_attach(struct bcd *bcd, bcd_error_t *error)
 {
 	struct sockaddr_un un;
 	const socklen_t addrlen = sizeof(un);
-	BCD_PACKET_INSTANCE(sizeof(pid_t)) packet;
-	pid_t *tid = BCD_PACKET_PAYLOAD(&packet);
+	pid_t *tid;
+	BCD_PACKET_INSTANCE(sizeof(*tid)) packet;
 	ssize_t r;
 	time_t timeout_abstime = bcd_os_time() + bcd_config.timeout;
 	int fd;
@@ -1392,11 +1432,12 @@ bcd_attach(struct bcd *bcd, bcd_error_t *error)
 		return -1;
 	}
 
+	tid = BCD_PACKET_PAYLOAD(&packet);
 	*tid = gettid();
 
 	BCD_PACKET(&packet)->op = BCD_OP_TID;
 
-	r = bcd_packet_write(fd, BCD_PACKET(&packet), sizeof(pid_t),
+	r = bcd_packet_write(fd, BCD_PACKET(&packet), BCD_PACKET_SIZE(&packet),
 	    timeout_abstime);
 	if (r == -1) {
 		bcd_error_set(error, errno, "failed to initialize session");
