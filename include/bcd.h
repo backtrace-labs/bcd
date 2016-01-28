@@ -227,9 +227,15 @@ const char *bcd_error_message(const bcd_error_t *);
 int bcd_error_errno(const bcd_error_t *);
 
 /*
- * Make key-value association.
+ * Make key-value association. KV-pairs are LIFO-ordered.
  */
 int bcd_kv(bcd_t *, const char *, const char *, bcd_error_t *);
+
+/*
+ * Add an argument to the command line. Arguments are presented to the tracing
+ * process in order.
+ */
+int bcd_arg(bcd_t *, const char *, bcd_error_t *);
 
 /*
  * Generate a backtrace for calling thread, grouped by error message. This

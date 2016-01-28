@@ -62,7 +62,10 @@ enum bcd_op {
 	BCD_OP_TR_FATAL,
 
 	/* Client tells slave to detach. */
-	BCD_OP_DETACH
+	BCD_OP_DETACH,
+
+	/* Client sends argument to ptrace */
+	BCD_OP_ARG,
 };
 
 struct bcd_packet {
@@ -87,6 +90,16 @@ struct bcd_kv {
 static LIST_HEAD(, bcd_kv) bcd_kv_list = LIST_HEAD_INITIALIZER(&bcd_kv_list);
 static size_t bcd_kv_length;
 static size_t bcd_kv_count;
+
+struct bcd_arg {
+	LIST_ENTRY(bcd_arg) linkage;
+	const char *arg;
+};
+static LIST_HEAD(, bcd_arg) bcd_arg_list = LIST_HEAD_INITIALIZER(&bcd_arg_list);
+static size_t bcd_arg_length;
+static size_t bcd_arg_count;
+static struct bcd_arg *arg_tail = NULL;
+
 static char *bcd_target_process;
 
 static sig_atomic_t sigalrm_fired;
@@ -102,7 +115,7 @@ static ssize_t bcd_sb_write(bcd_pipe_t *, enum bcd_op, struct bcd_packet *,
 
 #ifndef BCD_ARGC_LIMIT
 #define BCD_ARGC_LIMIT 32
-#endif /* BCD_PTRACE_LIMIT */
+#endif /* BCD_ARGC_LIMIT */
 
 #ifndef BCD_ARGV_LIMIT
 #define BCD_ARGV_LIMIT 1024
@@ -581,6 +594,94 @@ fail:
 	    "malformed key-value pair");
 }
 
+static ssize_t
+bcd_arg_get(char **output, size_t n_output, bcd_error_t *error)
+{
+	struct bcd_arg *cursor;
+	size_t limit = n_output;
+	size_t i = 0;
+
+	if (bcd_arg_count == 0) {
+		return 0;
+	}
+
+	if (n_output > bcd_arg_count)
+		limit = bcd_arg_count;
+
+	if (limit > BCD_ARGC_LIMIT)
+		limit = BCD_ARGC_LIMIT;
+
+	LIST_FOREACH(cursor, &bcd_arg_list, linkage) {
+		int ra;
+
+		if (i == limit)
+			break;
+
+		ra = asprintf(&output[i++], "%s", cursor->arg);
+		if (ra == -1) {
+			bcd_error_set(error, 0, "failed to allocate arg");
+			goto fail;
+		}
+	}
+
+	return (ssize_t)i;
+fail:
+	while (i-- > 0)
+		free(output[i]);
+
+	return -1;
+}
+
+static int
+bcd_arg_set(struct bcd_session *session, struct bcd_packet *packet)
+{
+	struct bcd_arg *argp, *cursor;
+	const char *arg = packet->payload;
+	size_t arglen;
+	char *stream;
+
+	arglen = strlen(arg);
+	if (arglen == 0)
+		goto fail;
+
+	argp = malloc(sizeof(*argp) + arglen + 1);
+	if (argp == NULL) {
+		return bcd_error(BCD_EVENT_METADATA, session,
+		    "internal memory allocation error");
+	}
+
+	if (bcd_arg_count == 0) {
+		LIST_INIT(&bcd_arg_list);
+	} else {
+		LIST_FOREACH(cursor, &bcd_arg_list, linkage) {
+			if (strcmp(cursor->arg, arg) == 0) {
+				bcd_arg_length -= strlen(cursor->arg) + 1;
+				LIST_REMOVE(cursor, linkage);
+				free(cursor);
+				bcd_kv_count--;
+				break;
+			}
+		}
+	}
+
+	stream = (char *)&argp[1];
+	memcpy(stream, arg, arglen + 1);
+	argp->arg = stream;
+
+	if (arg_tail == NULL) {
+		LIST_INSERT_HEAD(&bcd_arg_list, argp, linkage);
+	} else {
+		LIST_INSERT_AFTER(arg_tail, argp, linkage);
+	}
+	arg_tail = argp;
+	bcd_arg_count++;
+	bcd_arg_length += arglen + 1;
+	return 0;
+fail:
+	return bcd_error(BCD_EVENT_METADATA, session,
+	    "malformed argument");
+}
+
 int
 bcd_backtrace(const struct bcd *const bcd,
     enum bcd_target target, bcd_error_t *error)
@@ -769,7 +870,17 @@ bcd_backtrace_thread(struct bcd_session *session)
 	size_t delta = 2;
 
 	u.cargv[0] = bcd_config.invoke.path;
-	u.cargv[1] = bcd_target_process;
+
+	r = bcd_arg_get(&(u.argv[delta]), sizeof(u.argv) / sizeof(*u.argv) - delta,
+	    &error);
+	if (r == -1) {
+		free(tp);
+		return bcd_error(BCD_EVENT_TRACE, session,
+		    error.message);
+	}
+	delta += r;
+
+	u.cargv[delta++] = bcd_target_process;
 
 	if (bcd_config.invoke.tp != NULL) {
 		if (asprintf(&tp, "%s%ju", bcd_config.invoke.tp,
@@ -803,20 +914,30 @@ bcd_backtrace_process(struct bcd_session *session)
 		const char *cargv[BCD_ARGC_LIMIT];
 	} u;
 	bcd_error_t error;
+	size_t delta = 2;
 	ssize_t r;
 
 	u.cargv[0] = strdup(bcd_config.invoke.path);
-	u.cargv[1] = bcd_target_process;
 
-	r = bcd_kv_get(u.argv + 2, sizeof(u.argv) / sizeof(*u.argv) - 3,
+	r = bcd_arg_get(&(u.argv[delta]), sizeof(u.argv) / sizeof(*u.argv) - delta,
+	    &error);
+	if (r == -1) {
+		return bcd_error(BCD_EVENT_TRACE, session,
+		    error.message);
+	}
+	delta += r;
+
+	u.cargv[delta++] = bcd_target_process;
+
+	r = bcd_kv_get(u.argv + delta, sizeof(u.argv) / sizeof(*u.argv) - 3,
 	    bcd_config.invoke.separator,
 	    bcd_config.invoke.ks,
 	    bcd_config.invoke.kp, &error);
 	if (r == -1)
 		return bcd_error(BCD_EVENT_TRACE, session, error.message);
 
-	u.argv[r + 2] = NULL;
-	return bcd_execve(session, u.argv, 2);
+	u.argv[r + delta] = NULL;
+	return bcd_execve(session, u.argv, delta);
 }
 
 static int
@@ -830,6 +951,8 @@ bcd_perform_request(struct bcd_session *session)
 		break;
 	case BCD_OP_KV:
 		return bcd_kv_set(session, packet);
+	case BCD_OP_ARG:
+		return bcd_arg_set(session, packet);
 	case BCD_OP_TR_THREAD:
 		return bcd_backtrace_thread(session);
 	case BCD_OP_TR_PROCESS:
@@ -1031,7 +1154,37 @@ bcd_kv(struct bcd *bcd, const char *key, const char *value, bcd_error_t *e)
 
 	r = bcd_packet_write(fd, packet, packet->length, timeout_abstime);
 	if (r == -1) {
-		bcd_error_set(e, errno, "failed to initialize session");
+		bcd_error_set(e, errno, "failed to write kv-pair");
+		bcd_io_fd_close(fd);
+		return -1;
+	}
+
+	return bcd_channel_read_ack(fd, timeout_abstime, e);
+}
+
+int
+bcd_arg(struct bcd *bcd, const char *arg, bcd_error_t *e)
+{
+	BCD_PACKET_INSTANCE(BCD_PACKET_LIMIT) st;
+	struct bcd_packet *packet = BCD_PACKET(&st);
+	char *payload = packet->payload;
+	int fd = bcd->fd;
+	size_t arglen = strlen(arg) + 1;
+	ssize_t r;
+	time_t timeout_abstime = bcd_os_time() + bcd_config.timeout;
+
+	if (arglen > BCD_PACKET_LIMIT) {
+		bcd_error_set(e, 0, "argument is too long");
+		return -1;
+	}
+
+	packet->op = BCD_OP_ARG;
+	memcpy(payload, arg, arglen);
+	packet->length = arglen;
+
+	r = bcd_packet_write(fd, packet, packet->length, timeout_abstime);
+	if (r == -1) {
+		bcd_error_set(e, errno, "failed to write argument");
 		bcd_io_fd_close(fd);
 		return -1;
 	}
