@@ -16,6 +16,7 @@ bcd_config_init_v1(struct bcd_config_v1 *cf)
 	cf->handler = bcd_error_handler_default;
 	cf->timeout = 30;
 	cf->umask = 0177;
+	cf->affinity.target_cpu = -1;
 	memset(&cf->chown, 0, sizeof cf->chown);
 	memset(&cf->suid, 0, sizeof cf->chown);
 
@@ -56,6 +57,7 @@ bcd_config_assign_from_v1(const void *cfv, struct bcd_error *e)
 	bcd_config.invoke.output_file = cf->invoke.output_file;
 	bcd_config.ipc_mechanism = cf->ipc_mechanism;
 	bcd_config.ipc.us.path = cf->ipc.us.path;
+	bcd_config.affinity.target_cpu = cf->affinity.target_cpu;
 
 	return 0;
 }

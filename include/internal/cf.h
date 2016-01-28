@@ -92,6 +92,17 @@ struct bcd_config_internal {
 			const char *path;
 		} us;
 	} ipc;
+
+    /*
+     * CPU and NUMA node affinity parameters
+     */
+    struct {
+        /*
+         * CPU to bind ourselves to. If -1, we don't bother setting our
+         * affinity.
+         */
+        int target_cpu;
+    } affinity;
 };
 
 extern struct bcd_config_internal bcd_config;
@@ -187,6 +198,17 @@ struct bcd_config_v1 {
 			const char *path;
 		} us;
 	} ipc;
+
+    /*
+     * CPU and NUMA node affinity parameters
+     */
+    struct {
+        /*
+         * Target CPU core to migrate bcd to. If set to -1, the CPU affinity
+         * is unmodified.
+         */
+        int target_cpu;
+    } affinity;
 };
 
 typedef struct bcd_config_v1 bcd_config_latest_version_t;

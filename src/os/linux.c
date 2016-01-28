@@ -9,10 +9,31 @@
 
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <sched.h>
 
 #ifndef BCD_AMALGAMATED
 #include "internal.h"
 #endif /* !BCD_AMALGAMATED */
+
+int
+bcd_set_cpu_affinity(int core_id)
+{
+	pid_t pid = getpid();
+	cpu_set_t cpuset;
+
+	if (0 > core_id) {
+		return -1;
+	}
+
+	CPU_ZERO(&cpuset);
+	CPU_SET(core_id, &cpuset);
+
+	if (-1 == sched_setaffinity(pid, sizeof(cpuset), &cpuset)) {
+        return -1;
+	}
+
+	return 0;
+}
 
 time_t
 bcd_os_time(void)
