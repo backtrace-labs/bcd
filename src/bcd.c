@@ -92,13 +92,13 @@ static size_t bcd_kv_length;
 static size_t bcd_kv_count;
 
 struct bcd_arg {
-	LIST_ENTRY(bcd_arg) linkage;
+	TAILQ_ENTRY(bcd_arg) linkage;
 	const char *arg;
 };
-static LIST_HEAD(, bcd_arg) bcd_arg_list = LIST_HEAD_INITIALIZER(&bcd_arg_list);
+
+static TAILQ_HEAD(, bcd_arg) bcd_arg_list;
 static size_t bcd_arg_length;
 static size_t bcd_arg_count;
-static struct bcd_arg *arg_tail = NULL;
 
 static char *bcd_target_process;
 
@@ -611,7 +611,7 @@ bcd_arg_get(char **output, size_t n_output, bcd_error_t *error)
 	if (limit > BCD_ARGC_LIMIT)
 		limit = BCD_ARGC_LIMIT;
 
-	LIST_FOREACH(cursor, &bcd_arg_list, linkage) {
+	TAILQ_FOREACH(cursor, &bcd_arg_list, linkage) {
 		int ra;
 
 		if (i == limit)
@@ -635,8 +635,8 @@ fail:
 static int
 bcd_arg_set(struct bcd_session *session, struct bcd_packet *packet)
 {
-	struct bcd_arg *argp, *cursor;
 	const char *arg = packet->payload;
+	struct bcd_arg *argp, *cursor;
 	size_t arglen;
 	char *stream;
 
@@ -651,12 +651,12 @@ bcd_arg_set(struct bcd_session *session, struct bcd_packet *packet)
 	}
 
 	if (bcd_arg_count == 0) {
-		LIST_INIT(&bcd_arg_list);
+		TAILQ_INIT(&bcd_arg_list);
 	} else {
-		LIST_FOREACH(cursor, &bcd_arg_list, linkage) {
+		TAILQ_FOREACH(cursor, &bcd_arg_list, linkage) {
 			if (strcmp(cursor->arg, arg) == 0) {
 				bcd_arg_length -= strlen(cursor->arg) + 1;
-				LIST_REMOVE(cursor, linkage);
+				TAILQ_REMOVE(&bcd_arg_list, cursor, linkage);
 				free(cursor);
 				bcd_kv_count--;
 				break;
@@ -668,12 +668,7 @@ bcd_arg_set(struct bcd_session *session, struct bcd_packet *packet)
 	memcpy(stream, arg, arglen + 1);
 	argp->arg = stream;
 
-	if (arg_tail == NULL) {
-		LIST_INSERT_HEAD(&bcd_arg_list, argp, linkage);
-	} else {
-		LIST_INSERT_AFTER(arg_tail, argp, linkage);
-	}
-	arg_tail = argp;
+	TAILQ_INSERT_TAIL(&bcd_arg_list, argp, linkage);
 	bcd_arg_count++;
 	bcd_arg_length += arglen + 1;
 	return 0;
