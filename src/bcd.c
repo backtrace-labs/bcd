@@ -658,7 +658,7 @@ bcd_arg_set(struct bcd_session *session, struct bcd_packet *packet)
 				bcd_arg_length -= strlen(cursor->arg) + 1;
 				TAILQ_REMOVE(&bcd_arg_list, cursor, linkage);
 				free(cursor);
-				bcd_kv_count--;
+				bcd_arg_count--;
 				break;
 			}
 		}
