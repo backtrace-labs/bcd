@@ -862,11 +862,11 @@ bcd_backtrace_thread(struct bcd_session *session)
 	char *tp = NULL;;
 	pid_t tid = session->tid;
 	ssize_t r;
-	size_t delta = 2;
+	size_t delta = 0;
 
-	u.cargv[0] = bcd_config.invoke.path;
+	u.cargv[delta++] = bcd_config.invoke.path;
 
-	r = bcd_arg_get(&(u.argv[delta]), sizeof(u.argv) / sizeof(*u.argv) - delta,
+	r = bcd_arg_get(&(u.argv[delta]), sizeof(u.argv) / sizeof(*u.argv) - 2,
 	    &error);
 	if (r == -1) {
 		free(tp);
@@ -887,7 +887,8 @@ bcd_backtrace_thread(struct bcd_session *session)
 		u.argv[delta++] = tp;
 	}
 
-	r = bcd_kv_get(&(u.argv[delta]), sizeof(u.argv) / sizeof(*u.argv) - delta,
+	r = bcd_kv_get(&(u.argv[delta]),
+	    sizeof(u.argv) / sizeof(*u.argv) - (delta + 1),
 	    bcd_config.invoke.separator,
 	    bcd_config.invoke.ks,
 	    bcd_config.invoke.kp, &error);
@@ -909,12 +910,12 @@ bcd_backtrace_process(struct bcd_session *session)
 		const char *cargv[BCD_ARGC_LIMIT];
 	} u;
 	bcd_error_t error;
-	size_t delta = 2;
+	size_t delta = 0;
 	ssize_t r;
 
-	u.cargv[0] = strdup(bcd_config.invoke.path);
+	u.cargv[delta++] = strdup(bcd_config.invoke.path);
 
-	r = bcd_arg_get(&(u.argv[delta]), sizeof(u.argv) / sizeof(*u.argv) - delta,
+	r = bcd_arg_get(&(u.argv[delta]), sizeof(u.argv) / sizeof(*u.argv) - 2,
 	    &error);
 	if (r == -1) {
 		return bcd_error(BCD_EVENT_TRACE, session,
@@ -924,7 +925,8 @@ bcd_backtrace_process(struct bcd_session *session)
 
 	u.cargv[delta++] = bcd_target_process;
 
-	r = bcd_kv_get(u.argv + delta, sizeof(u.argv) / sizeof(*u.argv) - 3,
+	r = bcd_kv_get(&(u.argv[delta]),
+	    sizeof(u.argv) / sizeof(*u.argv) - (delta + 1),
 	    bcd_config.invoke.separator,
 	    bcd_config.invoke.ks,
 	    bcd_config.invoke.kp, &error);
