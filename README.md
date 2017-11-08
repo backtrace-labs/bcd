@@ -149,20 +149,36 @@ data to be extracted at time of fault.
 ```
 #include <bcd.h>
 #include <signal.h>
+#include <unistd.h>
 
 static void
 signal_handler(int s)
 {
 
-	(void)s;
 
 	bcd_fatal("This is a fatal crash");
+	raise(s);
 	return;
 }
 
 int
 main(void)
 {
+	struct bcd_config config;
+	bcd_error_t error;
+	bcd_t bcd;
+
+	/* Initialize BCD configuration. See bcd.h for options */
+	if (bcd_config_init(&config, &error) == -1)
+		exit(EXIT_FAILURE);
+
+	/* Initialize the library. */
+	if (bcd_init(&config, &error) == -1)
+		exit(EXIT_FAILURE);
+
+	/* Initialize a handle to BCD. */
+	if (bcd_attach(&bcd, &error) == -1)
+		exit(EXIT_FAILURE);
 
 	if (signal(SIGSEGV, signal_handler) == SIG_ERR)
 		abort();
