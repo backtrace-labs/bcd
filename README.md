@@ -140,7 +140,7 @@ run-times may rely on signals for functionality. This means BCD does not, by
 default, set any signal handlers. In order to handle crashes, ensure you
 install a signal handler. You are able to use `bcd_emit` for recoverable
 crashes and `bcd_fatal` for non-recoverable crashes. These functions are
-signal-safe and multithreaded.
+signal-safe and thread-safe.
 
 Below is a simple example that utilizes `signal`. For production use,
 please use `sigaction` with `SA_SIGINFO` set, this allows for additional
@@ -149,6 +149,7 @@ data to be extracted at time of fault.
 ```
 #include <bcd.h>
 #include <signal.h>
+#include <stdlib.h>
 #include <unistd.h>
 
 static void
