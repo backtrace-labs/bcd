@@ -235,7 +235,7 @@ bcd_child_exit(int e)
 {
 
 	unlink(bcd_config.ipc.us.path);
-	exit(e);
+	_exit(e);
 }
 
 #ifdef __linux__
@@ -832,7 +832,7 @@ bcd_execve(struct bcd_session *session, char **argv, size_t fr)
 			goto leave;
 		case SIGTERM:
 			kill(tracer_pid, SIGTERM);
-			exit(128 + SIGTERM); /* Per POSIX */
+			_exit(128 + SIGTERM); /* Per POSIX */
 		default:
 			/* UNREACHABLE */
 			abort();
@@ -1384,15 +1384,17 @@ bcd_child(void)
 		do {
 			ret = dup2(pcb.sb.output_fd, STDOUT_FILENO);
 		} while (ret == -1 && errno == EINTR);
+
 		if (ret == -1) {
-			exit(EXIT_FAILURE);
+			_exit(EXIT_FAILURE);
 		}
 
 		do {
 			ret = dup2(pcb.sb.output_fd, STDERR_FILENO);
 		} while (ret == -1 && errno == EINTR);
+
 		if (ret == -1) {
-			exit(EXIT_FAILURE);
+			_exit(EXIT_FAILURE);
 		}
 
 		bcd_io_fd_close(pcb.sb.output_fd);
@@ -1484,7 +1486,7 @@ bcd_child(void)
 
 fail:
 	bcd_error(BCD_EVENT_FATAL, NULL, "failed to create UNIX socket");
-	exit(EXIT_FAILURE);
+	_exit(EXIT_FAILURE);
 }
 
 static pid_t
@@ -1502,7 +1504,7 @@ bcd_os_fork(void)
 	pid = fork();
 	if (pid == 0) {
 		bcd_child();
-		exit(EXIT_SUCCESS);
+		_exit(EXIT_SUCCESS);
 	}
 
 	sigprocmask(SIG_SETMASK, &origmask, NULL);
