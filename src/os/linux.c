@@ -7,6 +7,7 @@
 #include <time.h>
 #include <unistd.h>
 
+#include <sys/prctl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sched.h>
@@ -14,6 +15,17 @@
 #ifndef BCD_AMALGAMATED
 #include "internal.h"
 #endif /* !BCD_AMALGAMATED */
+
+int
+bcd_setcomm(const char *title)
+{
+
+	/* Linux requires comm to be <= 16 bytes, including the terminator. */
+	if (title == NULL || *title == '\0' || strlen(title) > 15)
+		return -1;
+
+	return prctl(PR_SET_NAME, title);
+}
 
 int
 bcd_set_cpu_affinity(int core_id)

@@ -64,6 +64,7 @@ main(void)
 	cf.invoke.kp = NULL;
 	cf.invoke.tp = NULL;
 	cf.invoke.output_file = "bcd_output_file";
+	cf.flags |= BCD_CONFIG_F_SETCOMM;
 
 	if (bcd_init(&cf, &e) == -1) {
 		fprintf(stderr, "error: failed to init: %s (%s)\n",

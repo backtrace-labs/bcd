@@ -86,6 +86,9 @@ typedef void bcd_error_handler_t(enum bcd_event, pid_t, pid_t, const char *);
 
 #define BCD_CONFIG_VERSION 1
 
+/* Set a unique command name for the monitor process. */
+#define BCD_CONFIG_F_SETCOMM (1UL << 0)
+
 struct bcd_config {
 	/*
 	 * Version of structure, used for ABI compatibility for configuration

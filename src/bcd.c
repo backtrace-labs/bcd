@@ -1408,6 +1408,13 @@ bcd_child(void)
 
 	umask(bcd_config.umask);
 
+	if ((bcd_config.flags & BCD_CONFIG_F_SETCOMM) &&
+	    bcd_setcomm("[bcd] monitor") == -1) {
+		bcd_error(BCD_EVENT_FATAL, NULL,
+		    "failed to respect BCD_CONFIG_F_SETCOMM");
+		_exit(EXIT_FAILURE);
+	}
+
 	if (asprintf(&bcd_target_process, "%ju",
 	    (uintmax_t)pcb.sb.master_pid) == -1)
 		goto fail;
