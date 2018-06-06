@@ -53,6 +53,22 @@ point.
 Credentials, permission, OOM killer interaction and more may be configured with
 the `bcd_config` data structure, please see `bcd.h` for details.
 
+## Troubleshooting
+
+If you are on Linux and yama is enabled, you are able to change ptrace scope
+for your program using `prctl`.
+
+```
+#include <sys/prctl.h>
+
+prctl(PR_SET_PTRACER, PR_SET_PTRACER_ANY, 0, 0, 0);
+```
+
+System-level controls are otherwise available in `/proc/sys/kernel/yama`.
+
+For more details, please see:
+    https://www.kernel.org/doc/Documentation/security/Yama.txt
+
 ### Example
 
 ```c
@@ -75,7 +91,7 @@ main(void)
 	if (bcd_init(&config, &error) == -1)
 		goto fatal;
 
-	/* Initialize a handle to BCD. */
+	/* Initialize a handle to BCD. This is called by every thread. */
 	if (bcd_attach(&bcd, &error) == -1)
 		goto fatal;
 
