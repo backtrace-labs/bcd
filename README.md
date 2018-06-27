@@ -91,7 +91,7 @@ main(void)
 	if (bcd_init(&config, &error) == -1)
 		goto fatal;
 
-	/* Initialize a handle to BCD. This is called by every thread. */
+	/* Initialize a handle to BCD. This should be called by every thread interacting with BCD. */
 	if (bcd_attach(&bcd, &error) == -1)
 		goto fatal;
 
@@ -162,7 +162,7 @@ Below is a simple example that utilizes `signal`. For production use,
 please use `sigaction` with `SA_SIGINFO` set, this allows for additional
 data to be extracted at time of fault.
 
-```
+```c
 #include <bcd.h>
 #include <signal.h>
 #include <stdlib.h>
