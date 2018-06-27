@@ -172,7 +172,6 @@ static void
 signal_handler(int s)
 {
 
-
 	bcd_fatal("This is a fatal crash");
 	raise(s);
 	return;
