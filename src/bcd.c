@@ -346,9 +346,9 @@ bcd_handler_accept(bcd_io_event_t *client, unsigned int mask, void *closure)
 		bcd_io_event_destroy(client);
 	}
 
-  // Once we've accepted the client, we don't need the file anymore.
-  unlink(bcd_config.ipc.us.path);
-  unlinked_path = 1;
+	// Once we've accepted the client, we don't need the file anymore.
+	unlink(bcd_config.ipc.us.path);
+	unlinked_path = 1;
 	return;
 }
 
