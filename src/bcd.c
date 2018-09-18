@@ -41,6 +41,8 @@ struct bcd_pipe {
 };
 typedef struct bcd_pipe bcd_pipe_t;
 
+static int unlinked_path;
+
 enum bcd_op {
 	/*
 	 * Communicates configuration information through pipes, includes
@@ -234,7 +236,7 @@ static void
 bcd_child_exit(int e)
 {
 
-	unlink(bcd_config.ipc.us.path);
+	if(!unlinked_path) unlink(bcd_config.ipc.us.path);
 	_exit(e);
 }
 
@@ -344,6 +346,9 @@ bcd_handler_accept(bcd_io_event_t *client, unsigned int mask, void *closure)
 		bcd_io_event_destroy(client);
 	}
 
+  // Once we've accepted the client, we don't need the file anymore.
+  unlink(bcd_config.ipc.us.path);
+  unlinked_path = 1;
 	return;
 }
 
