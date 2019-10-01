@@ -239,14 +239,14 @@ bcd_child_exit(int e)
 }
 
 #ifdef __linux__
-#ifndef gettid
+#if !defined(__GLIBC_PREREQ) || !__GLIBC_PREREQ(2, 30)
 static pid_t
 gettid(void)
 {
 
 	return syscall(__NR_gettid);
 }
-#endif /* !gettid */
+#endif /* !defined(__GLIBC_PREREQ) || !__GLIBC_PREREQ(2, 30) */
 #endif /* __linux__ */
 
 void
