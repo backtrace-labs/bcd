@@ -368,7 +368,7 @@ bcd_io_listener_fd(const struct bcd_io_listener *l)
 struct bcd_io_listener *
 bcd_io_listener_unix(const char *path, int backlog, bcd_error_t *error)
 {
-	struct bcd_io_listener *listener = malloc(sizeof *listener);
+	struct bcd_io_listener *listener = calloc(1, sizeof *listener);
 	struct sockaddr_un un;
 
 	if (listener == NULL)
@@ -376,18 +376,18 @@ bcd_io_listener_unix(const char *path, int backlog, bcd_error_t *error)
 
 	if (*path != '/') {
 		bcd_error_set(error, 0, "listener requires full path");
-		return NULL;
+		goto error;
 	}
 
 	if (strlen(path) >= sizeof(un.sun_path)) {
 		bcd_error_set(error, 0, "UNIX socket path is too long");
-		return NULL;
+		goto error;
 	}
 
 	listener->path = strdup(path);
 	if (listener->path == NULL) {
 		bcd_error_set(error, 0, "failed to allocate socket path");
-		return NULL;
+		goto error;
 	}
 
 	listener->fd = bcd_io_socket(AF_UNIX, SOCK_STREAM, 0, error);
@@ -417,7 +417,9 @@ bcd_io_listener_unix(const char *path, int backlog, bcd_error_t *error)
 	return listener;
 
 error:
-	free(listener->path);
-	free(listener);
+	if (listener != NULL) {
+		free(listener->path);
+		free(listener);
+	}
 	return NULL;
 }

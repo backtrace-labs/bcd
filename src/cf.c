@@ -12,6 +12,7 @@ bcd_config_init_v1(struct bcd_config_v1 *cf)
 {
 
 	cf->version = 1;
+	cf->flags = 0;
 	cf->oom_adjust = 1;
 	cf->handler = bcd_error_handler_default;
 	cf->timeout = 30;
