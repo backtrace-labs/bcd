@@ -249,6 +249,22 @@ gettid(void)
 #endif /* !defined(__GLIBC_PREREQ) || !__GLIBC_PREREQ(2, 30) */
 #endif /* __linux__ */
 
+#ifdef __linux__
+static size_t
+strlcpy(char *dst, const char *src, size_t n)
+{
+	size_t len = strlen(src);
+
+	if (n > 0) {
+		size_t copy = len < n ? len : (n - 1);
+		memmove(dst, src, copy);
+		dst[copy] = '\0';
+	}
+
+	return len;
+}
+#endif /* __linux__ */
+
 void
 bcd_error_handler_default(enum bcd_event event, pid_t pid, pid_t tid,
     const char *message)
@@ -1439,7 +1455,7 @@ bcd_child(void)
 	    bcd_handler_request_response,
 	    sizeof(struct bcd_session), &error) == -1)
 		goto fail;
-	strncpy(BCD_PACKET_PAYLOAD(&packet), bcd_config.ipc.us.path,
+	strlcpy(BCD_PACKET_PAYLOAD(&packet), bcd_config.ipc.us.path,
 	    BCD_SB_PATH);
 
 	r = bcd_sb_write(&pcb.sb.slave, BCD_OP_CF,
@@ -1570,7 +1586,7 @@ bcd_attach(struct bcd *bcd, bcd_error_t *error)
 	}
 
 	memset(&un, 0, sizeof un);
-	strncpy(un.sun_path, pcb.sb.path, sizeof un.sun_path);
+	strlcpy(un.sun_path, pcb.sb.path, sizeof un.sun_path);
 	un.sun_family = AF_UNIX;
 
 	for (;;) {
@@ -1745,7 +1761,7 @@ bcd_init(const struct bcd_config *cf, bcd_error_t *error)
 
 	switch (BCD_PACKET(&packet)->op) {
 	case BCD_OP_CF:
-		strncpy(sb->path, BCD_PACKET_PAYLOAD(&packet), BCD_SB_PATH);
+		strlcpy(sb->path, BCD_PACKET_PAYLOAD(&packet), BCD_SB_PATH);
 		break;
 	default:
 		bcd_error_set(error, 0, "failed to initialize path");
