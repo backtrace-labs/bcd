@@ -3,8 +3,8 @@
 include @BUILD_DIR@/build/bcd.build
 
 TARGET_DIR=$(BUILD_DIR)/src
-SDIR=$(BUILD_DIR)/src
-INCLUDE_DIR=$(BUILD_DIR)/include
+SDIR=$(SRC_DIR)/src
+INCLUDE_DIR=$(SRC_DIR)/include
 
 # bcd.h must come first as it contains necessary feature_test_macros(7) for linux
 HEADERS=$(INCLUDE_DIR)/bcd.h \
@@ -41,9 +41,11 @@ io.o: $(SDIR)/io.c $(HEADERS)
 	$(CC) $(CFLAGS) -c -o $(TARGET_DIR)/io.o $(SDIR)/io.c
 
 io/linux.o: $(SDIR)/io/linux.c $(HEADERS)
+	mkdir -p $(TARGET_DIR)/io
 	$(CC) $(CFLAGS) -c -o $(TARGET_DIR)/io/linux.o $(SDIR)/io/linux.c
 
 os/linux.o: $(SDIR)/os/linux.c $(HEADERS)
+	mkdir -p $(TARGET_DIR)/os
 	$(CC) $(CFLAGS) -c -o $(TARGET_DIR)/os/linux.o $(SDIR)/os/linux.c
 
 distribution: clean
