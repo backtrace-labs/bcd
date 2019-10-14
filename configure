@@ -377,6 +377,10 @@ assert "$PLATFORM" "$PLATFORM" "unsupported"
 pathsearch()
 {
 	what=$1
+	if echo "$what" | grep -q ^/; then
+		echo "$what"
+		return
+	fi
 	oldFS="$IFS"
 	IFS=":"
 	for d in $PATH ; do
