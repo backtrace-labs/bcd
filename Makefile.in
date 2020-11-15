@@ -2,9 +2,6 @@
 
 include @BUILD_DIR@/build/bcd.build
 
-
-
-
 all:
 	$(MAKE) -C src all
 
@@ -24,9 +21,15 @@ install-so:
 	cp $(BUILD_DIR)/src/libbcd.so $(LIBRARY)/$(LDNAME_VERSION)
 	ln -sf $(LDNAME_VERSION) $(LIBRARY)/$(LDNAME)
 	ln -sf $(LDNAME_VERSION) $(LIBRARY)/$(LDNAME_MAJOR)
-	chmod 744 $(LIBRARY)/$(LDNAME_VERSION)		\
+	chmod 744 $(LIBRARY)/$(LDNAME_VERSION)			\
 	    $(LIBRARY)/$(LDNAME)				\
 	    $(LIBRARY)/$(LDNAME_MAJOR)
+	cp $(BUILD_DIR)/src/libbcd_preload.so $(LIBRARY)/$(LDNAME_PRELOAD_VERSION)
+	ln -sf $(LDNAME_PRELOAD_VERSION) $(LIBRARY)/$(LDNAME_PRELOAD)
+	ln -sf $(LDNAME_PRELOAD_VERSION) $(LIBRARY)/$(LDNAME_PRELOAD_MAJOR)
+	chmod 744 $(LIBRARY)/$(LDNAME_PRELOAD_VERSION)		\
+	    $(LIBRARY)/$(LDNAME_PRELOAD)			\
+	    $(LIBRARY)/$(LDNAME_PRELOAD_MAJOR)
 
 install-lib:
 	mkdir -p $(LIBRARY)

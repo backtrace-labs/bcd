@@ -21,18 +21,24 @@ all: $(ALL_LIBS)
 
 amalgamated: $(TARGET_DIR)/bcd-amalgamated.c
 
-$(TARGET_DIR)/bcd-amalgamated.c: $(HEADERS) $(SDIR)/bcd.c $(SDIR)/cf.c $(SDIR)/io.c $(SDIR)/*/*.c
+$(TARGET_DIR)/bcd-amalgamated.c: $(HEADERS) $(SDIR)/bcd.c $(SDIR)/preload.c $(SDIR)/cf.c $(SDIR)/io.c $(SDIR)/*/*.c
 	echo '#define BCD_AMALGAMATED' > $(TARGET_DIR)/bcd-amalgamated.c
-	cat $(HEADERS) $(SDIR)/bcd.c $(SDIR)/cf.c $(SDIR)/io.c $(SDIR)/*/*.c >> $(TARGET_DIR)/bcd-amalgamated.c
+	cat $(HEADERS) $(SDIR)/bcd.c $(SDIR)/preload.c $(SDIR)/cf.c $(SDIR)/io.c $(SDIR)/*/*.c >> $(TARGET_DIR)/bcd-amalgamated.c
 
 libbcd.so: $(OBJECTS)
 	$(LD) $(LDFLAGS) -o $(TARGET_DIR)/libbcd.so $(OBJECTS)
+
+libbcd_preload.so: $(OBJECTS) preload.o
+	$(LD) $(LDFLAGS_PRELOAD) -o $(TARGET_DIR)/libbcd_preload.so $(OBJECTS) preload.o
 
 libbcd.a: $(OBJECTS)
 	ar rcs $(TARGET_DIR)/libbcd.a $(OBJECTS)
 
 bcd.o: $(SDIR)/bcd.c $(HEADERS)
 	$(CC) $(CFLAGS) -c -o $(TARGET_DIR)/bcd.o $(SDIR)/bcd.c
+
+preload.o: $(SDIR)/preload.c $(HEADERS)
+	$(CC) $(CFLAGS) -DBCD_F_PRELOAD -c -o $(TARGET_DIR)/preload.o $(SDIR)/preload.c
 
 cf.o: $(SDIR)/cf.c $(HEADERS)
 	$(CC) $(CFLAGS) -c -o $(TARGET_DIR)/cf.o $(SDIR)/cf.c
@@ -52,4 +58,4 @@ distribution: clean
 clean:
 	rm -rf $(TARGET_DIR)/*.dSYM $(TARGET_DIR)/*~ $(TARGET_DIR)/*.o \
 	    $(OBJECTS) $(TARGET_DIR)/libbcd.a $(TARGET_DIR)/libbcd.so \
-	    $(TARGET_DIR)/bcd-amalgamated.c
+	    $(TARGET_DIR)/libbcd_preload.so $(TARGET_DIR)/bcd-amalgamated.c

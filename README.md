@@ -5,6 +5,9 @@ program errors. By default, BCD is configured to use the Backtrace I/O
 tracers and database clients to allow for process snapshots to be directly
 submitted to the database.
 
+If you are interested in enabling BCD without modifying source-code, please
+refer to the "Preload" section of the document.
+
 ## Supported Platforms
 
 BCD currently only supports Linux, but FreeBSD and IllumOS support is planned.
@@ -205,3 +208,35 @@ main(void)
 	return 0;
 }
 ```
+
+# Preloading
+
+It is possible to `LD_PRELOAD` BCD into an application. The preloading will
+initialize BCD in the target application through a library constructor,
+initializing signal handling and routing crashes to BCD. This is useful
+in container environments or situations where you want to enable Backtrace
+on an application without modifying the source-code.
+
+Example usage:
+```
+$ BCD_PRELOAD=1 LD_PRELOAD=/opt/backtrace/lib/libbcd_preload.so ./program
+[BCD] Initializing BCD...
+program.264261.1605471835.btt
+Aborted (core dumped)
+```
+
+You must include the path to `libbcd_preload.so` in `LD_PRELOAD` environment
+variable and set the `BCD_PRELOAD` environment variable to `1` to enale
+preloading.
+
+The following environment variables can be used to tune BCD configuration:
+
+```
+       BCD_INVOKE_PATH: Path to the program to invoke on a fatal signal.
+         BCD_INVOKE_KP: Key-value pair option.
+  BCD_INVOKE_SEPARATOR: The separator to use between key-value pairs.
+         BCD_INVOKE_KS: The seperator to use for a key-value pair.
+         BCD_INVOKE_TP: The seperator to use or threads.
+BCD_INVOKE_OUTPUT_FILE: Specifies the output file for the BCD_INVOKE_PATH program.
+```
+

@@ -34,13 +34,16 @@ WANT_PIC=yes
 
 P_PWD=`pwd`
 MAINTAINER='sbahra@backtrace.io'
-VERSION=${VERSION:-'1.0'}
+VERSION=${VERSION:-'1.1'}
 VERSION_MAJOR='0'
 BUILD="$PWD/build/bcd.build"
 PREFIX=${PREFIX:-"/usr/local"}
 LDNAME="libbcd.so"
 LDNAME_VERSION="libbcd.so.$VERSION"
 LDNAME_MAJOR="libbcd.so.$VERSION_MAJOR"
+LDNAME_PRELOAD="libbcd_preload.so"
+LDNAME_PRELOAD_VERSION="libbcd_preload.so.$VERSION"
+LDNAME_PRELOAD_MAJOR="libbcd_preload.so.$VERSION_MAJOR"
 
 OPTION_CHECKING=1
 
@@ -102,6 +105,7 @@ generate()
 	    -e "s#@INSTALL_LIBS@#$INSTALL_LIBS#g"		\
 	    -e "s#@LD@#$LD#g"					\
 	    -e "s#@LDFLAGS@#$LDFLAGS#g"				\
+	    -e "s#@LDFLAGS_PRELOAD@#$LDFLAGS_PRELOAD#g"		\
 	    -e "s#@PTHREAD_CFLAGS@#$PTHREAD_CFLAGS#g"		\
 	    -e "s#@MANDIR@#$MANDIR#g"				\
 	    -e "s#@GZIP@#$GZIP#g"				\
@@ -111,6 +115,9 @@ generate()
 	    -e "s#@LDNAME@#$LDNAME#g"				\
 	    -e "s#@LDNAME_MAJOR@#$LDNAME_MAJOR#g"		\
 	    -e "s#@LDNAME_VERSION@#$LDNAME_VERSION#g"		\
+	    -e "s#@LDNAME_PRELOAD@#$LDNAME_PRELOAD#g"			\
+	    -e "s#@LDNAME_PRELOAD_MAJOR@#$LDNAME_PRELOAD_MAJOR#g"	\
+	    -e "s#@LDNAME_PRELOAD_VERSION@#$LDNAME_PRELOAD_VERSION#g"	\
 		$2 > $3
 
 	ret=$?
@@ -134,20 +141,24 @@ generate_stdout()
 {
 
 	echo
-	echo "           VERSION = $VERSION"
-	echo "         BUILD_DIR = $P_PWD"
-	echo "           SRC_DIR = $BUILD_DIR"
-	echo "            SYSTEM = $SYSTEM"
-	echo "                CC = $CC"
-	echo "          COMPILER = $COMPILER"
-	echo "            CFLAGS = $CFLAGS"
-	echo "    PTHREAD_CFLAGS = $PTHREAD_CFLAGS"
-	echo "                LD = $LD"
-	echo "            LDNAME = $LDNAME"
-	echo "    LDNAME_VERSION = $LDNAME_VERSION"
-	echo "      LDNAME_MAJOR = $LDNAME_MAJOR"
-	echo "           LDFLAGS = $LDFLAGS"
-	echo "              GZIP = $GZIP"
+	echo "               VERSION = $VERSION"
+	echo "             BUILD_DIR = $P_PWD"
+	echo "               SRC_DIR = $BUILD_DIR"
+	echo "                SYSTEM = $SYSTEM"
+	echo "                    CC = $CC"
+	echo "              COMPILER = $COMPILER"
+	echo "                CFLAGS = $CFLAGS"
+	echo "        PTHREAD_CFLAGS = $PTHREAD_CFLAGS"
+	echo "                    LD = $LD"
+	echo "                LDNAME = $LDNAME"
+	echo "        LDNAME_VERSION = $LDNAME_VERSION"
+	echo "          LDNAME_MAJOR = $LDNAME_MAJOR"
+	echo "        LDNAME_PRELOAD = $LDNAME_PRELOAD"
+	echo "               LDFLAGS = $LDFLAGS"
+	echo "LDNAME_PRELOAD_VERSION = $LDNAME_PRELOAD_VERSION"
+	echo "  LDNAME_PRELOAD_MAJOR = $LDNAME_PRELOAD_MAJOR"
+	echo "       LDFLAGS_PRELOAD = $LDFLAGS_PRELOAD"
+	echo "                  GZIP = $GZIP"
 	echo
 	echo "Headers will be installed in $HEADERS"
 	echo "Libraries will be installed in $LIBRARY"
@@ -486,19 +497,25 @@ elif test "$COMPILER" = "gcc" || test "$COMPILER" = "clang" || test "$COMPILER" 
 		LDNAME="libbcd.dylib"
 		LDNAME_VERSION="libbcd.$VERSION.dylib"
 		LDNAME_MAJOR="libbcd.$VERSION_MAJOR.dylib"
+		LDNAME_PRELOAD="libbcd_preload.dylib"
+		LDNAME_PRELOAD_VERSION="libbcd_preload.$VERSION.dylib"
+		LDNAME_PRELOAD_MAJOR="libbcd_preload.$VERSION_MAJOR.dylib"
 		SONAME="$LIBRARY/$LDNAME_MAJOR"
 	else
 		CC_WL_OPT="-soname"
 	fi
 
+	LDFLAGS_PRELOAD="-Wl,$CC_WL_OPT,$LDNAME_PRELOAD_MAJOR $LDFLAGS"
 	LDFLAGS="-Wl,$CC_WL_OPT,$SONAME $LDFLAGS"
 	if test "$WANT_PIC" = "yes"; then
 		LDFLAGS="$LDFLAGS -shared -fPIC"
+		LDFLAGS_PRELOAD="$LDFLAGS_PRELOAD -shared -fPIC"
 		CFLAGS="$CFLAGS -fPIC"
-		ALL_LIBS="libbcd.so libbcd.a"
+		ALL_LIBS="libbcd.so libbcd_preload.so libbcd.a"
 		INSTALL_LIBS="install-so install-lib"
 	else
 		LDFLAGS="$LDFLAGS -fno-PIC"
+		LDFLAGS_PRELOAD="$LDFLAGS_PRELOAD -fno-PIC"
 		CFLAGS="$CFLAGS -fno-PIC"
 		ALL_LIBS="libbcd.a"
 		INSTALL_LIBS="install-lib"
