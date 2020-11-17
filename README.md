@@ -239,4 +239,31 @@ The following environment variables can be used to tune BCD configuration:
          BCD_INVOKE_TP: The seperator to use or threads.
 BCD_INVOKE_OUTPUT_FILE: Specifies the output file for the BCD_INVOKE_PATH program.
 ```
+# Containers
+
+## Security
+
+If you are using the Backtrace debugger or another tool relying on
+`ptrace(2)`, you'll need to ensure that the `CAP_SYS_PTRACE` capability is
+granted.
+
+For Docker, enable this with `--cap-add=SYS_PTRACE`. For Kubernetes, include
+`SYS_PTRACE` in `securityContext.capabilities.add`.
+
+```
+securityContext:
+  capabilities:
+    add:
+      - SYS_PTRACE
+```
+
+## Zombie processes
+
+If you have multiple instances of BCD or plan on using steady-state error
+reporting then it is recommended you use an `init`-process to avoid the
+possibility of zombie processes.
+
+For Kubernetes, learn more [here](https://kubernetes.io/docs/tasks/configure-pod-container/share-process-namespace/) about reaping using the `pause` container.
+
+For Docker, learn more about `tini` and the `--init` options [here](https://docs.docker.com/config/containers/multi-service_container/).
 
