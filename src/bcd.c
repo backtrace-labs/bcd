@@ -454,6 +454,8 @@ bcd_fatal(volatile const char *message)
 	volatile const char *BCD_MAGIC(message);
 	bcd_error_t error;
 	time_t timeout_abstime = bcd_os_time() + bcd_config.timeout;
+	unsigned int timeout = 0;
+	int wstatus;
 
 	BCD_MAGIC(message) = message;
 	BCD_CC_FORCE(BCD_MAGIC(message), message);
@@ -462,6 +464,14 @@ bcd_fatal(volatile const char *message)
 
 	/* Wait for child to exit. */
 	bcd_sb_read(&pcb.sb.slave, packet, 0, timeout_abstime, &error);
+
+	/* Finally, reap the child. */
+	while (waitpid(pcb.sb.slave_pid, &wstatus, WNOHANG) == 0 &&
+	    timeout < bcd_config.timeout) {
+		sleep(1);
+		timeout++;
+	}
+
 	return;
 }
 
