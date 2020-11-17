@@ -12,46 +12,46 @@ regressions: amalgamated
 	$(MAKE) -C regressions all
 
 install-headers:
-	mkdir -p $(HEADERS) || exit
-	cp $(BUILD_DIR)/include/bcd.h $(HEADERS) || exit
-	chmod 644 $(HEADERS)/bcd.h || exit
+	mkdir -p $(DESTDIR)$(HEADERS) || exit
+	cp $(BUILD_DIR)/include/bcd.h $(DESTDIR)$(HEADERS) || exit
+	chmod 644 $(DESTDIR)$(HEADERS)/bcd.h || exit
 
 install-so:
-	mkdir -p $(LIBRARY)
-	cp $(BUILD_DIR)/src/libbcd.so $(LIBRARY)/$(LDNAME_VERSION)
-	ln -sf $(LDNAME_VERSION) $(LIBRARY)/$(LDNAME)
-	ln -sf $(LDNAME_VERSION) $(LIBRARY)/$(LDNAME_MAJOR)
-	chmod 744 $(LIBRARY)/$(LDNAME_VERSION)			\
-	    $(LIBRARY)/$(LDNAME)				\
-	    $(LIBRARY)/$(LDNAME_MAJOR)
-	cp $(BUILD_DIR)/src/libbcd_preload.so $(LIBRARY)/$(LDNAME_PRELOAD_VERSION)
-	ln -sf $(LDNAME_PRELOAD_VERSION) $(LIBRARY)/$(LDNAME_PRELOAD)
-	ln -sf $(LDNAME_PRELOAD_VERSION) $(LIBRARY)/$(LDNAME_PRELOAD_MAJOR)
-	chmod 744 $(LIBRARY)/$(LDNAME_PRELOAD_VERSION)		\
-	    $(LIBRARY)/$(LDNAME_PRELOAD)			\
-	    $(LIBRARY)/$(LDNAME_PRELOAD_MAJOR)
+	mkdir -p $(DESTDIR)$(LIBRARY)
+	cp $(BUILD_DIR)/src/libbcd.so $(DESTDIR)$(LIBRARY)/$(LDNAME_VERSION)
+	ln -sf $(LDNAME_VERSION) $(DESTDIR)$(LIBRARY)/$(LDNAME)
+	ln -sf $(LDNAME_VERSION) $(DESTDIR)$(LIBRARY)/$(LDNAME_MAJOR)
+	chmod 744 $(DESTDIR)$(LIBRARY)/$(LDNAME_VERSION)			\
+	    $(DESTDIR)$(LIBRARY)/$(LDNAME)				\
+	    $(DESTDIR)$(LIBRARY)/$(LDNAME_MAJOR)
+	cp $(BUILD_DIR)/src/libbcd_preload.so $(DESTDIR)$(LIBRARY)/$(LDNAME_PRELOAD_VERSION)
+	ln -sf $(LDNAME_PRELOAD_VERSION) $(DESTDIR)$(LIBRARY)/$(LDNAME_PRELOAD)
+	ln -sf $(LDNAME_PRELOAD_VERSION) $(DESTDIR)$(LIBRARY)/$(LDNAME_PRELOAD_MAJOR)
+	chmod 744 $(DESTDIR)$(LIBRARY)/$(LDNAME_PRELOAD_VERSION)		\
+	    $(DESTDIR)$(LIBRARY)/$(LDNAME_PRELOAD)			\
+	    $(DESTDIR)$(LIBRARY)/$(LDNAME_PRELOAD_MAJOR)
 
 install-lib:
-	mkdir -p $(LIBRARY)
-	cp $(BUILD_DIR)/src/libbcd.a $(LIBRARY)/libbcd.a
-	chmod 644 $(LIBRARY)/libbcd.a
+	mkdir -p $(DESTDIR)$(LIBRARY)
+	cp $(BUILD_DIR)/src/libbcd.a $(DESTDIR)$(LIBRARY)/libbcd.a
+	chmod 644 $(DESTDIR)$(LIBRARY)/libbcd.a
 
 install: all install-headers @INSTALL_LIBS@
-	mkdir -p $(LIBRARY) || exit
-	mkdir -p $(PKGCONFIG_DATA) || exit
-	chmod 755 $(PKGCONFIG_DATA)
-	cp $(BUILD_DIR)/build/bcd.pc $(PKGCONFIG_DATA)/bcd.pc || exit
+	mkdir -p $(DESTDIR)$(LIBRARY) || exit
+	mkdir -p $(DESTDIR)$(PKGCONFIG_DATA) || exit
+	chmod 755 $(DESTDIR)$(PKGCONFIG_DATA)
+	cp $(BUILD_DIR)/build/bcd.pc $(DESTDIR)$(PKGCONFIG_DATA)/bcd.pc || exit
 	@echo
 	@echo
 	@echo ---[ BCD has installed successfully.
 
 uninstall:
-	rm -f $(LIBRARY)/$(LDNAME_VERSION)	\
-	    $(LIBRARY)/$(LDNAME)		\
-	    $(LIBRARY)/$(LDNAME_MAJOR)
-	rm -f $(LIBRARY)/libbcd.so*		\
-	    $(LIBRARY)/libbcd.a
-	rm -f $(HEADERS)/bcd.h
+	rm -f $(DESTDIR)$(LIBRARY)/$(LDNAME_VERSION)	\
+	    $(DESTDIR)$(LIBRARY)/$(LDNAME)		\
+	    $(DESTDIR)$(LIBRARY)/$(LDNAME_MAJOR)
+	rm -f $(DESTDIR)$(LIBRARY)/libbcd.so*		\
+	    $(DESTDIR)$(LIBRARY)/libbcd.a
+	rm -f $(DESTDIR)$(HEADERS)/bcd.h
 
 dist:
 	git archive --remote=$(BUILD_DIR) --format=tar --prefix=bcd-$(VERSION)/ HEAD \
