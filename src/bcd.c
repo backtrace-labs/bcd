@@ -442,6 +442,23 @@ bcd_channel_read_ack(int fd, time_t timeout_abstime, bcd_error_t *error)
 	return 0;
 }
 
+void
+bcd_reap(void)
+{
+	unsigned int timeout = 0;
+	int wstatus;
+
+	do {
+		if (waitpid(pcb.sb.slave_pid, &wstatus, WNOHANG) == 0)
+			continue;
+
+		if (!WIFEXITED(wstatus) && !WIFSIGNALED(wstatus))
+			continue;
+	} while (sleep(1), timeout++ < bcd_config.timeout);
+
+	return;
+}
+
 /*
  * Requests trace and signals child that it should exit.
  */
@@ -454,8 +471,6 @@ bcd_fatal(volatile const char *message)
 	volatile const char *BCD_MAGIC(message);
 	bcd_error_t error;
 	time_t timeout_abstime = bcd_os_time() + bcd_config.timeout;
-	unsigned int timeout = 0;
-	int wstatus;
 
 	BCD_MAGIC(message) = message;
 	BCD_CC_FORCE(BCD_MAGIC(message), message);
@@ -464,14 +479,7 @@ bcd_fatal(volatile const char *message)
 
 	/* Wait for child to exit. */
 	bcd_sb_read(&pcb.sb.slave, packet, 0, timeout_abstime, &error);
-
-	/* Finally, reap the child. */
-	while (waitpid(pcb.sb.slave_pid, &wstatus, WNOHANG) == 0 &&
-	    timeout < bcd_config.timeout) {
-		sleep(1);
-		timeout++;
-	}
-
+	bcd_reap();
 	return;
 }
 

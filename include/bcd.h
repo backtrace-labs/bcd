@@ -279,6 +279,11 @@ void bcd_fatal(volatile const char *);
  */
 int bcd_associate_tid(const bcd_t *, bcd_error_t *error, pid_t tid);
 
+/*
+ * Reap child process to avoid zombie.
+ */
+void bcd_reap(void);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
