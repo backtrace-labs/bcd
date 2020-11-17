@@ -259,9 +259,9 @@ securityContext:
 
 ## Zombie processes
 
-If you have multiple instances of BCD or plan on using steady-state error
-reporting then it is recommended you use an `init`-process to avoid the
-possibility of zombie processes.
+If you have multiple instances of BCD (different processes calling `bcd_init`
+in one container) or plan on using steady-state error reporting then it is
+recommended you use an `init`-process to avoid the possibility of zombie processes.
 
 For Kubernetes, learn more [here](https://kubernetes.io/docs/tasks/configure-pod-container/share-process-namespace/) about reaping using the `pause` container.
 
