@@ -13,7 +13,7 @@ regressions: amalgamated
 
 install-headers:
 	mkdir -p $(DESTDIR)$(HEADERS) || exit
-	cp $(BUILD_DIR)/include/bcd.h $(DESTDIR)$(HEADERS) || exit
+	cp $(SRC_DIR)/include/bcd.h $(DESTDIR)$(HEADERS) || exit
 	chmod 644 $(DESTDIR)$(HEADERS)/bcd.h || exit
 
 install-so:
