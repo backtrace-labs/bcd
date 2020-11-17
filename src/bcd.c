@@ -1458,6 +1458,18 @@ bcd_child(void)
 	bcd_pipe_ensure_readonly(&pcb.sb.master);
 	bcd_pipe_ensure_writeonly(&pcb.sb.slave);
 
+	/*
+	 * The tracer may use additional subprocesses to do asynchronous processing
+	 * that doesn't need to prevent the tracee from exiting.  In the case of
+	 * bcd_fatal especially we rely on the monitor exiting to close the pipe to
+	 * signal the tracee to return from bcd_fatal.  The tracer itself doesn't need
+	 * this pipe, we wait on the tracer process before exiting the monitor.
+	 *
+	 * However, without setting CLOEXEC the tracer's subprocesses can keep the
+	 * pipe open, even if the tracer itself has exited.
+	 */
+	fcntl(pcb.sb.slave.fd[1], F_SETFD, FD_CLOEXEC);
+
 	listener = bcd_io_listener_unix(
 	    bcd_config.ipc.us.path, 128, &error);
 	if (listener == NULL)
