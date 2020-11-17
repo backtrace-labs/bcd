@@ -521,7 +521,7 @@ elif test "$COMPILER" = "gcc" || test "$COMPILER" = "clang" || test "$COMPILER" 
 		INSTALL_LIBS="install-lib"
 	fi
 
-	CFLAGS="-D_XOPEN_SOURCE=600 -D_GNU_SOURCE -D_BSD_SOURCE -D_DEFAULT_SOURCE -std=gnu99 -Wall -W -Wundef -Wendif-labels -Wshadow -Wpointer-arith -Wcast-align -Wwrite-strings -Wstrict-prototypes -Wmissing-prototypes -Wnested-externs -Winline -Wdisabled-optimization -fstrict-aliasing -O2 -pipe -Wno-parentheses $CFLAGS"
+	CFLAGS="-ggdb -D_XOPEN_SOURCE=600 -D_GNU_SOURCE -D_BSD_SOURCE -D_DEFAULT_SOURCE -std=gnu99 -Wall -W -Wundef -Wendif-labels -Wshadow -Wpointer-arith -Wcast-align -Wwrite-strings -Wstrict-prototypes -Wmissing-prototypes -Wnested-externs -Winline -Wdisabled-optimization -fstrict-aliasing -O2 -pipe -Wno-parentheses $CFLAGS"
 	PTHREAD_CFLAGS="-pthread"
 	if test "$COMPILER" = "mingw64"; then
 		ENVIRONMENT=64
