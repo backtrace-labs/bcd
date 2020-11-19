@@ -181,16 +181,16 @@ struct bcd_config {
 		} us;
 	} ipc;
 
-    /*
-     * CPU and NUMA node affinity parameters
-     */
-    struct {
-        /*
-         * Target CPU core to migrate bcd to. If set to -1, the CPU affinity
-         * is unmodified.
-         */
-        int target_cpu;
-    } affinity;
+	/*
+	 * CPU and NUMA node affinity parameters
+	 */
+	struct {
+		/*
+		 * Target CPU core to migrate bcd to. If set to -1, the CPU
+		 * affinity is unmodified.
+		 */
+		int target_cpu;
+	} affinity;
 };
 
 /*

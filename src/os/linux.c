@@ -33,16 +33,15 @@ bcd_set_cpu_affinity(int core_id)
 	pid_t pid = getpid();
 	cpu_set_t cpuset;
 
-	if (0 > core_id) {
+	if (core_id < 0) {
 		return -1;
 	}
 
 	CPU_ZERO(&cpuset);
 	CPU_SET(core_id, &cpuset);
 
-	if (-1 == sched_setaffinity(pid, sizeof(cpuset), &cpuset)) {
-        return -1;
-	}
+	if (sched_setaffinity(pid, sizeof(cpuset), &cpuset) == -1)
+		return -1;
 
 	return 0;
 }
