@@ -176,6 +176,8 @@ signal_handler(int s)
 {
 
 	bcd_fatal("This is a fatal crash");
+
+	signal(s, SIG_DFL);
 	raise(s);
 	return;
 }
