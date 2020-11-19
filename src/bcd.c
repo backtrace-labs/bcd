@@ -771,6 +771,27 @@ vfork_tracer(char **argv)
 	return tracer_pid;
 }
 
+static int
+signal_check(int *sig)
+{
+	int r = 1;
+
+	if (sigterm_fired) {
+		*sig = SIGTERM;
+		sigterm_fired = 0;
+	} else if (sigchld_fired) {
+		*sig = SIGCHLD;
+		sigchld_fired = 0;
+	} else if (sigalrm_fired) {
+		*sig = SIGALRM;
+		sigalrm_fired = 0;
+	} else {
+		r = 0;
+	}
+
+	return r;
+}
+
 /*
  * bcd_execve is guaranteed to never mutate arguments argv[N]
  * where N < fr.
@@ -778,6 +799,7 @@ vfork_tracer(char **argv)
 static int
 bcd_execve(struct bcd_session *session, char **argv, size_t fr)
 {
+	const struct timespec timeout = { .tv_sec = 1, .tv_nsec = 0 };
 	sigset_t blockset, interestset, origset;
 	bcd_signal_handler_t *old_sigalrm_handler,
 	    *old_sigchld_handler, *old_sigterm_handler;
@@ -817,17 +839,11 @@ bcd_execve(struct bcd_session *session, char **argv, size_t fr)
 		 * Handle the cases where SIGALRM, SIGCHLD, or SIGTERM fired
 		 * after vfork() and before sigprocmask().
 		 */
-		if (sigterm_fired) {
-			sig = SIGTERM;
-			sigterm_fired = 0;
-		} else if (sigchld_fired) {
-			sig = SIGCHLD;
-			sigchld_fired = 0;
-		} else if (sigalrm_fired) {
-			sig = SIGALRM;
-			sigalrm_fired = 0;
-		} else
-			sigwait(&interestset, (int *)&sig);
+		if (signal_check(&sig) == 0) {
+			sig = sigtimedwait(&interestset, NULL, &timeout);
+			if (sig <= 0)
+				signal_check(&sig);
+		}
 
 		switch (sig) {
 		case SIGALRM:
@@ -842,11 +858,8 @@ bcd_execve(struct bcd_session *session, char **argv, size_t fr)
 				retval = bcd_error(BCD_EVENT_TRACE,
 				    session, "failed to wait for tracer", errno);
 				goto leave;
-			} else if (wait_ret == 0) {
-				/* SIGCHLD was for another child process. */
-				continue;
 			}
-			assert(wait_ret == tracer_pid);
+
 			if (!WIFEXITED(tracer_status) &&
 			    !WIFSIGNALED(tracer_status))
 				continue;
