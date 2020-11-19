@@ -62,6 +62,8 @@ bcd_preload(void)
 	bcd_error_t error;
 	bcd_t bcd;
 	const char *enabled = getenv("BCD_PRELOAD");
+	const char *reraise = getenv("BCD_RAISE");
+	unsigned int flags = 0;
 	int r;
 
 	if (enabled == NULL)
@@ -86,7 +88,10 @@ bcd_preload(void)
 	if (bcd_attach(&bcd, &error) == -1)
 		exit(EXIT_FAILURE);
 
-	r = bcd_sigaction(NULL, 0);
+	if (reraise != NULL && strcmp(reraise, "1") == 0)
+		flags |= BCD_SIGACTION_RAISE;
+
+	r = bcd_sigaction(NULL, flags);
 	if (r != 0) {
 		fprintf(stderr, "[BCD] failed to register handler for %d: %d\n",
 		    r, errno);

@@ -237,6 +237,8 @@ The following environment variables can be used to tune BCD configuration:
          BCD_INVOKE_KS: The seperator to use for a key-value pair.
          BCD_INVOKE_TP: The seperator to use or threads.
 BCD_INVOKE_OUTPUT_FILE: Specifies the output file for the BCD_INVOKE_PATH program.
+             BCD_RAISE: Set to 1 if you wish to invoke the default handler after
+                        bcd_fatal has completed.
 ```
 # Containers
 
