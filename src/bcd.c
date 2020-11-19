@@ -169,7 +169,6 @@ struct bcd_session {
 	BCD_PACKET_INSTANCE(BCD_PACKET_LIMIT) packet;
 };
 
-
 static void bcd_handler_request_response(bcd_io_event_t *client);
 static int bcd_read_request(int fd, struct bcd_session *);
 static int bcd_perform_request(struct bcd_session *session);
