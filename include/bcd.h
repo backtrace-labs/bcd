@@ -36,6 +36,7 @@
 extern "C" {
 #endif /* __cplusplus */
 
+#include <signal.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 
@@ -283,6 +284,12 @@ int bcd_associate_tid(const bcd_t *, bcd_error_t *error, pid_t tid);
  * Reap child process to avoid zombie.
  */
 void bcd_reap(void);
+
+/*
+ * Register the specified signal handler, or set to NULL to use the default
+ * bcd signal handlers. Returns non-zero if registering a handler failed.
+ */
+int bcd_sigaction(void (*handler)(int, siginfo_t *, void *));
 
 #ifdef __cplusplus
 }

@@ -55,47 +55,6 @@ bcd_config_from_env(struct bcd_config *cf)
 	return;
 }
 
-static void
-signal_handler(int s, siginfo_t *si, void *unused)
-{
-
-	(void)unused;
-	(void)si;
-
-	bcd_fatal("Fatal signal received.");
-
-	signal(s, SIG_DFL);
-	raise(s);
-	return;
-}
-
-static void
-bcd_preload_sigaction(void)
-{
-	struct sigaction sa;
-	int signals[] = {
-		SIGSEGV,
-		SIGFPE,
-		SIGABRT,
-		SIGBUS,
-		SIGILL,
-		SIGFPE
-	};
-
-	sa.sa_sigaction = signal_handler;
-	sigemptyset(&sa.sa_mask);
-	sa.sa_flags = SA_SIGINFO | SA_ONSTACK;
-
-	for (size_t i = 0; i < sizeof(signals) / sizeof(*signals); i++) {
-		if (sigaction(signals[i], &sa, NULL) == -1) {
-			fprintf(stderr, "warning: failed to set signal "
-			    "handler %d\n", signals[i]);
-		}
-	}
-
-	return;
-}
-
 static void __attribute__((constructor))
 bcd_preload(void)
 {
@@ -103,6 +62,7 @@ bcd_preload(void)
 	bcd_error_t error;
 	bcd_t bcd;
 	const char *enabled = getenv("BCD_PRELOAD");
+	int r;
 
 	if (enabled == NULL)
 		return;
@@ -126,7 +86,11 @@ bcd_preload(void)
 	if (bcd_attach(&bcd, &error) == -1)
 		exit(EXIT_FAILURE);
 
-	bcd_preload_sigaction();
+	r = bcd_sigaction(NULL);
+	if (r != 0) {
+		fprintf(stderr, "[BCD] failed to register handler for %d: %d\n",
+		    r, errno);
+	}
 	return;
 }
 #endif /* BCD_F_PRELOAD */

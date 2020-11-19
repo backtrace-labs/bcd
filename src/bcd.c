@@ -175,6 +175,51 @@ static int bcd_perform_request(struct bcd_session *session);
 static int bcd_write_ack(int fd, struct bcd_session *);
 
 static void
+bcd_default_signal_handler(int s, siginfo_t *si, void *unused)
+{
+
+	(void)unused;
+	(void)si;
+
+	bcd_fatal("Fatal signal received.");
+
+	signal(s, SIG_DFL);
+	raise(s);
+	return;
+}
+
+int
+bcd_sigaction(void (*h)(int, siginfo_t *, void *))
+{
+	int signals[] = {
+		SIGSEGV,
+		SIGFPE,
+		SIGABRT,
+		SIGBUS,
+		SIGILL,
+		SIGFPE
+	};
+	struct sigaction sa;
+	size_t i;
+
+	if (h != NULL) {
+		sa.sa_sigaction = h;
+	} else {
+		sa.sa_sigaction = bcd_default_signal_handler;
+	}
+
+	sigemptyset(&sa.sa_mask);
+	sa.sa_flags = SA_SIGINFO | SA_ONSTACK;
+
+	for (i = 0; i < sizeof(signals) / sizeof(*signals); i++) {
+		if (sigaction(signals[i], &sa, NULL) == -1)
+			return signals[i];
+	}
+
+	return 0;
+}
+
+static void
 handle_sigalrm(int sig)
 {
 
