@@ -61,7 +61,7 @@ enum bcd_op {
 	BCD_OP_TR_THREAD,
 	BCD_OP_TR_FATAL,
 
-	/* Client tells slave to detach. */
+	/* Client tells monitor to detach. */
 	BCD_OP_DETACH,
 
 	/* Client sends argument to ptrace */
@@ -127,9 +127,9 @@ static ssize_t bcd_sb_write(bcd_pipe_t *, enum bcd_op, struct bcd_packet *,
 
 struct bcd_sb {
 	pid_t master_pid;
-	pid_t slave_pid;
+	pid_t monitor_pid;
 	bcd_pipe_t master;
-	bcd_pipe_t slave;
+	bcd_pipe_t monitor;
 	char path[BCD_SB_PATH];
 	int output_fd;
 };
@@ -449,7 +449,7 @@ bcd_reap(void)
 	int wstatus;
 
 	do {
-		if (waitpid(pcb.sb.slave_pid, &wstatus, WNOHANG) == 0)
+		if (waitpid(pcb.sb.monitor_pid, &wstatus, WNOHANG) == 0)
 			continue;
 
 		if (!WIFEXITED(wstatus) && !WIFSIGNALED(wstatus))
@@ -478,7 +478,7 @@ bcd_fatal(volatile const char *message)
 	bcd_sb_write(pd, BCD_OP_TR_FATAL, packet, 0, timeout_abstime);
 
 	/* Wait for child to exit. */
-	bcd_sb_read(&pcb.sb.slave, packet, 0, timeout_abstime, &error);
+	bcd_sb_read(&pcb.sb.monitor, packet, 0, timeout_abstime, &error);
 	bcd_reap();
 	return;
 }
@@ -1456,7 +1456,7 @@ bcd_child(void)
 	bcd_io_init(&error);
 
 	bcd_pipe_ensure_readonly(&pcb.sb.master);
-	bcd_pipe_ensure_writeonly(&pcb.sb.slave);
+	bcd_pipe_ensure_writeonly(&pcb.sb.monitor);
 
 	/*
 	 * The tracer may use additional subprocesses to do asynchronous processing
@@ -1468,7 +1468,7 @@ bcd_child(void)
 	 * However, without setting CLOEXEC the tracer's subprocesses can keep the
 	 * pipe open, even if the tracer itself has exited.
 	 */
-	fcntl(pcb.sb.slave.fd[1], F_SETFD, FD_CLOEXEC);
+	fcntl(pcb.sb.monitor.fd[1], F_SETFD, FD_CLOEXEC);
 
 	listener = bcd_io_listener_unix(
 	    bcd_config.ipc.us.path, 128, &error);
@@ -1488,7 +1488,7 @@ bcd_child(void)
 	strlcpy(BCD_PACKET_PAYLOAD(&packet), bcd_config.ipc.us.path,
 	    BCD_SB_PATH);
 
-	r = bcd_sb_write(&pcb.sb.slave, BCD_OP_CF,
+	r = bcd_sb_write(&pcb.sb.monitor, BCD_OP_CF,
 	    BCD_PACKET(&packet), strlen(bcd_config.ipc.us.path) + 1,
 	    0 /* wait forever */);
 	if (r == -1) {
@@ -1497,7 +1497,7 @@ bcd_child(void)
 		bcd_child_exit(EXIT_FAILURE);
 	}
 
-	event = bcd_io_event_create(pcb.sb.slave.fd[1], bcd_handler_sb, 0,
+	event = bcd_io_event_create(pcb.sb.monitor.fd[1], bcd_handler_sb, 0,
 	    &error);
 	if (event == NULL) {
 		bcd_error(BCD_EVENT_FATAL, NULL,
@@ -1611,7 +1611,7 @@ bcd_attach(struct bcd *bcd, bcd_error_t *error)
 	fd = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (fd == -1) {
 		bcd_error_set(error, errno,
-		    "failed to create connection to slave");
+		    "failed to create connection to monitor");
 		goto fail;
 	}
 
@@ -1626,7 +1626,7 @@ bcd_attach(struct bcd *bcd, bcd_error_t *error)
 				continue;
 
 			bcd_error_set(error, errno,
-			    "failed to connect to slave");
+			    "failed to connect to monitor");
 			goto fail;
 		}
 
@@ -1683,7 +1683,7 @@ bcd_detach(struct bcd *bcd, bcd_error_t *error)
 	r = bcd_packet_write(bcd->fd, BCD_PACKET(&packet), 0, timeout_abstime);
 	if (r == -1) {
 		bcd_error_set(error, errno,
-		    "failed to cause slave to detach");
+		    "failed to cause monitor to detach");
 		retval = -1;
 		goto fail;
 	}
@@ -1761,14 +1761,14 @@ bcd_init(const struct bcd_config *cf, bcd_error_t *error)
 
 	sb->master_pid = getpid();
 
-	if (bcd_pipe_init(&sb->slave, error) == -1) {
-		error->message = "failed to initialize slave pipe";
+	if (bcd_pipe_init(&sb->monitor, error) == -1) {
+		error->message = "failed to initialize monitor pipe";
 		return -1;
 	}
 
 	if (bcd_pipe_init(&sb->master, error) == -1) {
 		error->message = "failed to initialize master pipe";
-		bcd_pipe_deinit(&sb->slave);
+		bcd_pipe_deinit(&sb->monitor);
 		return -1;
 	}
 
@@ -1776,15 +1776,15 @@ bcd_init(const struct bcd_config *cf, bcd_error_t *error)
 	if (child == -1)
 		goto fail;
 
-	sb->slave_pid = child;
-	bcd_pipe_ensure_readonly(&sb->slave);
+	sb->monitor_pid = child;
+	bcd_pipe_ensure_readonly(&sb->monitor);
 	bcd_pipe_ensure_writeonly(&sb->master);
 
 	/*
 	 * After the child has spawned, wait for configuration information.
 	 */
 	timeout_abstime = bcd_os_time() + bcd_config.timeout;
-	r = bcd_sb_read(&sb->slave, BCD_PACKET(&packet), BCD_SB_PATH,
+	r = bcd_sb_read(&sb->monitor, BCD_PACKET(&packet), BCD_SB_PATH,
 	    timeout_abstime, error);
 	if (r == -1)
 		goto fail;
@@ -1814,7 +1814,7 @@ bcd_init(const struct bcd_config *cf, bcd_error_t *error)
 	return 0;
 
 fail:
-	bcd_pipe_deinit(&sb->slave);
+	bcd_pipe_deinit(&sb->monitor);
 	bcd_pipe_deinit(&sb->master);
 	return -1;
 }

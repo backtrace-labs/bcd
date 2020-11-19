@@ -68,7 +68,7 @@ typedef struct bcd_error bcd_error_t;
  * BCD_EVENT_TRACE indicates that a trace has failed, but this is
  * recoverable. FATAL indicates an unrecoverable error, and it is
  * recommended that the primary process exits as the environment is
- * in an unrecoverable state. The BCD slave will always attempt
+ * in an unrecoverable state. The BCD monitor will always attempt
  * to clean up after itself.
  */
 enum bcd_event {
@@ -165,7 +165,7 @@ struct bcd_config {
 	} invoke;
 
 	/*
-	 * IPC mechanism for invoker slave. The only supported mechanism
+	 * IPC mechanism for invoker monitor. The only supported mechanism
 	 * at the moment is UNIX sockets.
 	 */
 	enum bcd_ipc ipc_mechanism;
@@ -209,14 +209,14 @@ int bcd_config_init_internal(struct bcd_config *, unsigned int, bcd_error_t *);
 int bcd_init(const struct bcd_config *, bcd_error_t *);
 
 /*
- * Initialize a handle to the trace slave. Returns -1 on error and
+ * Initialize a handle to the trace monitor. Returns -1 on error and
  * sets error object, otherwise returns 0. Handle interface is necessary
  * for clean synchronous semantics, else we rely on fragile signal semantics.
  */
 int bcd_attach(bcd_t *, bcd_error_t *);
 
 /*
- * Destroy a handle to the trace slave. Returns -1 on error and
+ * Destroy a handle to the trace monitor. Returns -1 on error and
  * sets error object, otherwise returns 0.
  */
 int bcd_detach(bcd_t *, bcd_error_t *);

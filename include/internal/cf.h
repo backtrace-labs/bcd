@@ -77,7 +77,7 @@ struct bcd_config_internal {
 	} invoke;
 
 	/*
-	 * IPC mechanism for invoker slave. The only supported mechanism
+	 * IPC mechanism for invoker monitor. The only supported mechanism
 	 * at the moment is UNIX sockets.
 	 */
 	enum bcd_ipc ipc_mechanism;
@@ -183,7 +183,7 @@ struct bcd_config_v1 {
 	} invoke;
 
 	/*
-	 * IPC mechanism for invoker slave. The only supported mechanism
+	 * IPC mechanism for invoker monitor. The only supported mechanism
 	 * at the moment is UNIX sockets.
 	 */
 	enum bcd_ipc ipc_mechanism;
