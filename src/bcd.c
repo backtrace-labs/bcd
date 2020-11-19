@@ -205,14 +205,14 @@ handle_sigterm(int sig)
 
 static int
 bcd_error(enum bcd_event event, const struct bcd_session *session,
-    const char *string)
+    const char *string, int code)
 {
 	pid_t tid = 0;
 
 	if (session != NULL)
 		tid = session->tid;
 
-	bcd_config.handler(event, pcb.sb.master_pid, tid, string);
+	bcd_config.handler(event, pcb.sb.master_pid, tid, string, code);
 	return -1;
 }
 
@@ -267,11 +267,11 @@ strlcpy(char *dst, const char *src, size_t n)
 
 void
 bcd_error_handler_default(enum bcd_event event, pid_t pid, pid_t tid,
-    const char *message)
+    const char *message, int code)
 {
 
-	fprintf(stderr, "[%d] process(%ju)/thread(%ju): %s\n",
-	    event, (uintmax_t)pid, (uintmax_t)tid, message);
+	fprintf(stderr, "[%d] process(%ju)/thread(%ju): %s: %d\n",
+	    event, (uintmax_t)pid, (uintmax_t)tid, message, code);
 	return;
 }
 
@@ -386,13 +386,13 @@ bcd_write_ack(int fd, struct bcd_session *session)
 			}
 
 			bcd_error(BCD_EVENT_FATAL, session,
-			    "unknown communication error");
+			    "unknown communication error", errno);
 			bcd_child_exit(EXIT_FAILURE);
 		}
 
 		if (r == 0) {
 			bcd_error(BCD_EVENT_FATAL, session,
-			    "premature process termination");
+			    "premature process termination", r);
 			bcd_child_exit(EXIT_FAILURE);
 		}
 
@@ -599,7 +599,7 @@ bcd_kv_set(struct bcd_session *session, struct bcd_packet *packet)
 	kv = malloc(sizeof(*kv) + k_l + v_l + 2);
 	if (kv == NULL) {
 		return bcd_error(BCD_EVENT_METADATA, session,
-		    "internal memory allocation error");
+		    "internal memory allocation error", errno);
 	}
 
 	if (bcd_kv_count == 0)
@@ -629,7 +629,7 @@ bcd_kv_set(struct bcd_session *session, struct bcd_packet *packet)
 	return 0;
 fail:
 	return bcd_error(BCD_EVENT_METADATA, session,
-	    "malformed key-value pair");
+	    "malformed key-value pair", 0);
 }
 
 static ssize_t
@@ -685,7 +685,7 @@ bcd_arg_set(struct bcd_session *session, struct bcd_packet *packet)
 	argp = malloc(sizeof(*argp) + arglen + 1);
 	if (argp == NULL) {
 		return bcd_error(BCD_EVENT_METADATA, session,
-		    "internal memory allocation error");
+		    "internal memory allocation error", errno);
 	}
 
 	if (bcd_arg_count == 0) {
@@ -712,7 +712,7 @@ bcd_arg_set(struct bcd_session *session, struct bcd_packet *packet)
 	return 0;
 fail:
 	return bcd_error(BCD_EVENT_METADATA, session,
-	    "malformed argument");
+	    "malformed argument", 0);
 }
 
 int
@@ -754,7 +754,7 @@ void
 bcd_abort(void)
 {
 
-	bcd_error(BCD_EVENT_FATAL, NULL, "unrecoverable internal error");
+	bcd_error(BCD_EVENT_FATAL, NULL, "unrecoverable internal error", 0);
 	return;
 }
 
@@ -807,7 +807,7 @@ bcd_execve(struct bcd_session *session, char **argv, size_t fr)
 	tracer_pid = vfork_tracer(argv);
 	if (tracer_pid == -1) {
 		retval = bcd_error(BCD_EVENT_TRACE, session,
-		    "failed to execute tracer");
+		    "failed to execute tracer", errno);
 		goto leave;
 	}
 
@@ -834,14 +834,14 @@ bcd_execve(struct bcd_session *session, char **argv, size_t fr)
 		case SIGALRM:
 			kill(tracer_pid, SIGKILL);
 			retval = bcd_error(BCD_EVENT_TRACE, session,
-			    "tracer time out");
+			    "tracer time out", 0);
 			goto leave;
 		case SIGCHLD:
 			wait_ret = waitpid(tracer_pid, (int *)&tracer_status,
 			    WNOHANG);
 			if (wait_ret == -1) {
 				retval = bcd_error(BCD_EVENT_TRACE,
-				    session, "failed to wait for tracer");
+				    session, "failed to wait for tracer", errno);
 				goto leave;
 			} else if (wait_ret == 0) {
 				/* SIGCHLD was for another child process. */
@@ -854,13 +854,13 @@ bcd_execve(struct bcd_session *session, char **argv, size_t fr)
 			if (WIFEXITED(tracer_status)) {
 				if (WEXITSTATUS(tracer_status) != 0) {
 					retval = bcd_error(BCD_EVENT_TRACE,
-					    session, "tracer exited non-zero");
+					    session, "tracer exited non-zero", 0);
 					goto leave;
 				}
 			}
 			if (WIFSIGNALED(tracer_status)) {
 				retval = bcd_error(BCD_EVENT_TRACE, session,
-				    "tracer killed with signal");
+				    "tracer killed with signal", 0);
 				goto leave;
 			}
 			/* The tracer exited successfully. */
@@ -909,7 +909,7 @@ bcd_backtrace_thread(struct bcd_session *session)
 	if (r == -1) {
 		free(tp);
 		return bcd_error(BCD_EVENT_TRACE, session,
-		    error.message);
+		    error.message, 0);
 	}
 	delta += r;
 
@@ -919,7 +919,7 @@ bcd_backtrace_thread(struct bcd_session *session)
 		if (asprintf(&tp, "%s%ju", bcd_config.invoke.tp,
 		    (uintmax_t)tid) == -1) {
 			return bcd_error(BCD_EVENT_TRACE, session,
-			    "failed to construct tracer string");
+			    "failed to construct tracer string", 0);
 		}
 
 		u.argv[delta++] = tp;
@@ -933,7 +933,7 @@ bcd_backtrace_thread(struct bcd_session *session)
 	if (r == -1) {
 		free(tp);
 		return bcd_error(BCD_EVENT_TRACE, session,
-		    error.message);
+		    error.message, 0);
 	}
 
 	u.argv[r + delta] = NULL;
@@ -957,7 +957,7 @@ bcd_backtrace_process(struct bcd_session *session)
 	    &error);
 	if (r == -1) {
 		return bcd_error(BCD_EVENT_TRACE, session,
-		    error.message);
+		    error.message, 0);
 	}
 	delta += r;
 
@@ -969,7 +969,7 @@ bcd_backtrace_process(struct bcd_session *session)
 	    bcd_config.invoke.ks,
 	    bcd_config.invoke.kp, &error);
 	if (r == -1)
-		return bcd_error(BCD_EVENT_TRACE, session, error.message);
+		return bcd_error(BCD_EVENT_TRACE, session, error.message, 0);
 
 	u.argv[r + delta] = NULL;
 	return bcd_execve(session, u.argv, delta);
@@ -1078,6 +1078,8 @@ bcd_read_request(int fd, struct bcd_session *session)
 				return -1;
 			}
 
+			bcd_error(BCD_EVENT_FATAL, session,
+			    "unexpected termination of stream", errno);
 			goto fail;
 		}
 
@@ -1089,6 +1091,9 @@ bcd_read_request(int fd, struct bcd_session *session)
 				 */
 				return 0;
 			}
+
+			bcd_error(BCD_EVENT_FATAL, session,
+			    "unexpected termination of stream", 0);
 			goto fail;
 		}
 
@@ -1097,7 +1102,7 @@ bcd_read_request(int fd, struct bcd_session *session)
 			target = packet->length;
 			if (target > BCD_PACKET_LIMIT) {
 				bcd_error(BCD_EVENT_FATAL, session,
-				    "message size is too large");
+				    "message size is too large", (int)target);
 				bcd_child_exit(EXIT_FAILURE);
 			}
 		}
@@ -1107,7 +1112,6 @@ bcd_read_request(int fd, struct bcd_session *session)
 	return 0;
 
 fail:
-	bcd_error(BCD_EVENT_FATAL, session, "unexpected termination of stream");
 	bcd_child_exit(EXIT_FAILURE);
 	return -1; /* Unreachable */
 }
@@ -1449,7 +1453,7 @@ bcd_child(void)
 	if ((bcd_config.flags & BCD_CONFIG_F_SETCOMM) &&
 	    bcd_setcomm("[bcd] monitor") == -1) {
 		bcd_error(BCD_EVENT_FATAL, NULL,
-		    "failed to respect BCD_CONFIG_F_SETCOMM");
+		    "failed to respect BCD_CONFIG_F_SETCOMM", 0);
 		_exit(EXIT_FAILURE);
 	}
 
@@ -1497,7 +1501,7 @@ bcd_child(void)
 	    0 /* wait forever */);
 	if (r == -1) {
 		bcd_error(BCD_EVENT_FATAL, NULL,
-		    "failed to write configuration information");
+		    "failed to write configuration information", errno);
 		bcd_child_exit(EXIT_FAILURE);
 	}
 
@@ -1505,15 +1509,15 @@ bcd_child(void)
 	    &error);
 	if (event == NULL) {
 		bcd_error(BCD_EVENT_FATAL, NULL,
-		    "failed to configure pipe watcher");
+		    "failed to configure pipe watcher", errno);
 		bcd_child_exit(EXIT_FAILURE);
 	}
 
 	if (bcd_io_event_add(event, BCD_IO_EVENT_CLOSE,
 	    &error) == -1) {
 		bcd_io_event_destroy(event);
-		bcd_error(BCD_EVENT_FATAL, NULL,
-		    "failed to monitor pipe");
+		bcd_error(BCD_EVENT_FATAL, NULL, "failed to monitor pipe",
+		    errno);
 		bcd_child_exit(EXIT_FAILURE);
 	}
 
@@ -1521,28 +1525,28 @@ bcd_child(void)
 	    &error);
 	if (event == NULL) {
 		bcd_error(BCD_EVENT_FATAL, NULL,
-		    "failed to configure master pipe");
+		    "failed to configure master pipe", errno);
 		bcd_child_exit(EXIT_FAILURE);
 	}
 
 	if (bcd_io_event_add(event, BCD_IO_EVENT_READ | BCD_IO_EVENT_CLOSE,
 	    &error) == -1) {
 		bcd_error(BCD_EVENT_FATAL, NULL,
-		    "failed to watch master pipe");
+		    "failed to watch master pipe", errno);
 		bcd_io_event_destroy(event);
 		bcd_child_exit(EXIT_FAILURE);
 	}
 
 	if (bcd_io_enter(&error) == -1) {
 		bcd_error(BCD_EVENT_FATAL, NULL,
-		    error.message);
+		    error.message, error.errnum);
 		bcd_child_exit(EXIT_FAILURE);
 	}
 
 	bcd_child_exit(EXIT_SUCCESS);
 
 fail:
-	bcd_error(BCD_EVENT_FATAL, NULL, "failed to create UNIX socket");
+	bcd_error(BCD_EVENT_FATAL, NULL, "failed to create UNIX socket", errno);
 	_exit(EXIT_FAILURE);
 }
 

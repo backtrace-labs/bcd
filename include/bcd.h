@@ -82,7 +82,7 @@ enum bcd_ipc {
 	BCD_IPC_UNIX_SOCKET = 0
 };
 
-typedef void bcd_error_handler_t(enum bcd_event, pid_t, pid_t, const char *);
+typedef void bcd_error_handler_t(enum bcd_event, pid_t, pid_t, const char *, int);
 
 #define BCD_CONFIG_VERSION 1
 

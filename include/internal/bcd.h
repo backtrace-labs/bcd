@@ -4,7 +4,7 @@
 #include "bcd.h"
 
 void bcd_error_handler_default(enum bcd_event event, pid_t pid, pid_t tid,
-    const char *message);
+    const char *message, int);
 void bcd_error_set(bcd_error_t *, int, const char *);
 void bcd_abort(void);
 
