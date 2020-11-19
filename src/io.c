@@ -370,6 +370,11 @@ bcd_io_listener_unix(const char *path, int backlog, bcd_error_t *error)
 {
 	struct bcd_io_listener *listener = calloc(1, sizeof *listener);
 	struct sockaddr_un un;
+	int type = SOCK_STREAM;
+
+#ifdef SOCK_CLOEXEC
+	type |= SOCK_CLOEXEC;
+#endif
 
 	if (listener == NULL)
 		return NULL;
@@ -390,7 +395,7 @@ bcd_io_listener_unix(const char *path, int backlog, bcd_error_t *error)
 		goto error;
 	}
 
-	listener->fd = bcd_io_socket(AF_UNIX, SOCK_STREAM, 0, error);
+	listener->fd = bcd_io_socket(AF_UNIX, type, 0, error);
 	if (listener->fd == -1)
 		goto error;
 
