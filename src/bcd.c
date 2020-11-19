@@ -196,7 +196,6 @@ bcd_default_signal_handler_raise(int s, siginfo_t *si, void *unused)
 	bcd_fatal("Fatal signal received.");
 
 	signal(s, SIG_DFL);
-	raise(s);
 	return;
 }
 
