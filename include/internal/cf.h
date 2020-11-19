@@ -103,6 +103,8 @@ struct bcd_config_internal {
          */
         int target_cpu;
     } affinity;
+
+    void (*monitor_init)(void);
 };
 
 extern struct bcd_config_internal bcd_config;
@@ -209,6 +211,8 @@ struct bcd_config_v1 {
          */
         int target_cpu;
     } affinity;
+
+    void (*monitor_init)(void);
 };
 
 typedef struct bcd_config_v1 bcd_config_latest_version_t;

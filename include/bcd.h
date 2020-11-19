@@ -192,6 +192,13 @@ struct bcd_config {
 		 */
 		int target_cpu;
 	} affinity;
+
+	/*
+	 * If non-NULL, this function is called by the BCD child. This can
+	 * be used to implement user-defined policies (for example, usage
+	 * of prctl may be desired).
+	 */
+	void (*monitor_init)(void);
 };
 
 /*

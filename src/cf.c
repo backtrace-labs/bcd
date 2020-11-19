@@ -11,6 +11,8 @@ static void
 bcd_config_init_v1(struct bcd_config_v1 *cf)
 {
 
+	memset(cf, 0, sizeof *cf);
+
 	cf->version = 1;
 	cf->flags = 0;
 	cf->oom_adjust = 1;
@@ -29,7 +31,6 @@ bcd_config_init_v1(struct bcd_config_v1 *cf)
 	cf->invoke.output_file = NULL;
 
 	cf->ipc_mechanism = BCD_IPC_UNIX_SOCKET;
-	memset(&cf->ipc, 0, sizeof cf->ipc);
 }
 
 static int
@@ -59,7 +60,7 @@ bcd_config_assign_from_v1(const void *cfv, struct bcd_error *e)
 	bcd_config.ipc_mechanism = cf->ipc_mechanism;
 	bcd_config.ipc.us.path = cf->ipc.us.path;
 	bcd_config.affinity.target_cpu = cf->affinity.target_cpu;
-
+	bcd_config.monitor_init = cf->monitor_init;
 	return 0;
 }
 

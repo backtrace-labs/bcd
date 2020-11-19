@@ -1496,6 +1496,9 @@ bcd_child(void)
 	bcd_io_event_t *event;
 	ssize_t r;
 
+	if (bcd_config.monitor_init != NULL)
+		bcd_config.monitor_init();
+
 	bcd_set_cpu_affinity(bcd_config.affinity.target_cpu);
 
 	if (pcb.sb.output_fd != -1) {
