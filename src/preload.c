@@ -83,6 +83,7 @@ bcd_preload_sigaction(void)
 	};
 
 	sa.sa_sigaction = signal_handler;
+	sigemptyset(&sa.sa_mask);
 	sa.sa_flags = SA_SIGINFO | SA_ONSTACK;
 
 	for (size_t i = 0; i < sizeof(signals) / sizeof(*signals); i++) {
