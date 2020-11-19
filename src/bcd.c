@@ -446,10 +446,14 @@ void
 bcd_reap(void)
 {
 	unsigned int timeout = 0;
-	int wstatus;
+	int wstatus, r;
 
 	do {
-		if (waitpid(pcb.sb.monitor_pid, &wstatus, WNOHANG) == 0)
+		r = waitpid(pcb.sb.monitor_pid, &wstatus, WNOHANG);
+		if (r == -1)
+			break;
+
+		if (r == 0)
 			continue;
 
 		if (!WIFEXITED(wstatus) && !WIFSIGNALED(wstatus))
