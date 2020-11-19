@@ -29,6 +29,9 @@
 #include "internal.h"
 #endif /* !BCD_AMALGAMATED */
 
+/* Auto-generated path for socket if unspecified by user. */
+#define BCD_US_PATH	"/tmp/bcd.XXXXXX"
+
 #define BCD_MAGIC(N) \
 	bcd_MAGICAL_UNICORNS_##N
 
@@ -105,6 +108,7 @@ static char *bcd_target_process;
 static sig_atomic_t sigalrm_fired;
 static sig_atomic_t sigchld_fired;
 static sig_atomic_t sigterm_fired;
+static const char *unlink_directory;
 
 typedef void bcd_signal_handler_t(int);
 
@@ -292,6 +296,10 @@ bcd_child_exit(int e)
 {
 
 	unlink(bcd_config.ipc.us.path);
+
+	if (unlink_directory != NULL)
+		rmdir(unlink_directory);
+
 	_exit(e);
 }
 
@@ -1808,9 +1816,26 @@ bcd_init(const struct bcd_config *cf, bcd_error_t *error)
 	}
 
 	if (bcd_config.ipc.us.path == NULL) {
-		char *buffer;
-		int as = asprintf(&buffer, "/tmp/bcd.%ju",
-		    (uintmax_t)getpid());
+		char path[] = "/tmp/bcd.XXXXXX";
+		char *buffer = NULL;
+		int as = 0;
+
+		if (mkdtemp(path) == NULL) {
+			as = -1;
+		} else {
+			as = asprintf(&buffer, "%s/bcd.socket", path);
+			if (as == -1)
+				rmdir(path);
+
+			unlink_directory = strdup(path);
+			if (unlink_directory == NULL) {
+				rmdir(path);
+				free(buffer);
+				bcd_error_set(error, 0,
+				    "failed to generate UNIX socket directory");
+				return -1;
+			}
+		}
 
 		if (as == -1) {
 			bcd_error_set(error, 0,
