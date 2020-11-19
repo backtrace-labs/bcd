@@ -285,11 +285,13 @@ int bcd_associate_tid(const bcd_t *, bcd_error_t *error, pid_t tid);
  */
 void bcd_reap(void);
 
+#define BCD_SIGACTION_RAISE	(1U)
+
 /*
  * Register the specified signal handler, or set to NULL to use the default
  * bcd signal handlers. Returns non-zero if registering a handler failed.
  */
-int bcd_sigaction(void (*handler)(int, siginfo_t *, void *));
+int bcd_sigaction(void (*handler)(int, siginfo_t *, void *), unsigned int flags);
 
 #ifdef __cplusplus
 }

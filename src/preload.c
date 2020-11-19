@@ -86,7 +86,7 @@ bcd_preload(void)
 	if (bcd_attach(&bcd, &error) == -1)
 		exit(EXIT_FAILURE);
 
-	r = bcd_sigaction(NULL);
+	r = bcd_sigaction(NULL, 0);
 	if (r != 0) {
 		fprintf(stderr, "[BCD] failed to register handler for %d: %d\n",
 		    r, errno);

@@ -180,6 +180,18 @@ bcd_default_signal_handler(int s, siginfo_t *si, void *unused)
 
 	(void)unused;
 	(void)si;
+	(void)s;
+
+	bcd_fatal("Fatal signal received.");
+	_exit(EXIT_FAILURE);
+}
+
+static void
+bcd_default_signal_handler_raise(int s, siginfo_t *si, void *unused)
+{
+
+	(void)unused;
+	(void)si;
 
 	bcd_fatal("Fatal signal received.");
 
@@ -189,7 +201,7 @@ bcd_default_signal_handler(int s, siginfo_t *si, void *unused)
 }
 
 int
-bcd_sigaction(void (*h)(int, siginfo_t *, void *))
+bcd_sigaction(void (*h)(int, siginfo_t *, void *), unsigned int flags)
 {
 	int signals[] = {
 		SIGSEGV,
@@ -204,6 +216,8 @@ bcd_sigaction(void (*h)(int, siginfo_t *, void *))
 
 	if (h != NULL) {
 		sa.sa_sigaction = h;
+	} else if (flags & BCD_SIGACTION_RAISE) {
+		sa.sa_sigaction = bcd_default_signal_handler_raise;
 	} else {
 		sa.sa_sigaction = bcd_default_signal_handler;
 	}
