@@ -97,7 +97,7 @@ struct bcd_config {
 	 */
 	unsigned int version;
 
-	/* These are currently unused. */
+	/* Bitmap of BCD_CONFIG_F_*. */
 	unsigned long flags;
 
 	/* If set, then protect preforked bcd process from OOM killer. */
