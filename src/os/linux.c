@@ -67,12 +67,12 @@ bcd_os_oom_adjust(bcd_error_t *error)
 {
 	char path[PATH_MAX];
 	pid_t pid = getpid();
-	const char *const score = "-17";
+	const char *score = "-1000";
 	size_t score_length = strlen(score);
 	ssize_t ac = 0;
 	int r, fd, i;
 
-	r = snprintf(path, sizeof(path), "/proc/%ju/oom_adj",
+	r = snprintf(path, sizeof(path), "/proc/%ju/oom_score_adj",
 	    (uintmax_t)pid);
 
 	for (i = 0;; i++) {
@@ -90,7 +90,8 @@ bcd_os_oom_adjust(bcd_error_t *error)
 			}
 
 			r = snprintf(path, sizeof(path),
-			    "/proc/%ju/oom_score_adj", (uintmax_t)pid);
+			    "/proc/%ju/oom_adj", (uintmax_t)pid);
+			score = "-17";
 			continue;
 		}
 
