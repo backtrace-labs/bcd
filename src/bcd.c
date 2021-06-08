@@ -1325,7 +1325,15 @@ bcd_handler_fatal(bcd_io_event_t *client)
 		return;
 	}
 
-	bcd_backtrace_process(NULL);
+	/*
+	 * We may arrive here because our parent exited and bcd_handler_sb didn't run
+	 * yet. Only take a backtrace if our parent actually wrote a request to do
+	 * so.
+	 */
+	if (r > 0) {
+		bcd_backtrace_process(NULL);
+	}
+
 	bcd_child_exit(EXIT_SUCCESS);
 }
 
