@@ -90,6 +90,13 @@ typedef void bcd_error_handler_t(enum bcd_event, pid_t, pid_t, const char *, int
 /* Set a unique command name for the monitor process. */
 #define BCD_CONFIG_F_SETCOMM (1UL << 0)
 
+/*
+ * First chance handler in BCD, invoked in the context of the BCD worker
+ * thread. If the return value of the function is -1 then the tracer is not
+ * executed.
+ */
+typedef int bcd_handler_t(pid_t);
+
 struct bcd_config {
 	/*
 	 * Version of structure, used for ABI compatibility for configuration
@@ -199,6 +206,9 @@ struct bcd_config {
 	 * of prctl may be desired).
 	 */
 	void (*monitor_init)(void);
+
+	/* BCD in-process request handler. See type definition. */
+	bcd_handler_t *request_handler;
 };
 
 /*

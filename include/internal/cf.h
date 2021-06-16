@@ -105,6 +105,7 @@ struct bcd_config_internal {
     } affinity;
 
     void (*monitor_init)(void);
+    int (*request_handler)(pid_t);
 };
 
 extern struct bcd_config_internal bcd_config;
@@ -213,6 +214,7 @@ struct bcd_config_v1 {
     } affinity;
 
     void (*monitor_init)(void);
+    int (*request_handler)(pid_t);
 };
 
 typedef struct bcd_config_v1 bcd_config_latest_version_t;

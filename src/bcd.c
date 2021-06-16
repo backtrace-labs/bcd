@@ -968,6 +968,22 @@ leave:
 }
 
 static int
+bcd_request_handler(pid_t tid, struct bcd_session *session)
+{
+
+	if (tid == 0)
+		tid = session->tid;
+
+	if (bcd_config.request_handler != NULL &&
+	    bcd_config.request_handler(tid) == -1) {
+		return bcd_error(BCD_EVENT_TRACE, session,
+		    "request handler intercepted event", 0);
+	}
+
+	return 0;
+}
+
+static int
 bcd_backtrace_thread(struct bcd_session *session)
 {
 	union {
@@ -979,6 +995,9 @@ bcd_backtrace_thread(struct bcd_session *session)
 	pid_t tid = session->tid;
 	ssize_t r;
 	size_t delta = 0;
+
+	if (bcd_request_handler(tid, session) == -1)
+		return -1;
 
 	u.cargv[delta++] = bcd_config.invoke.path;
 
@@ -1028,6 +1047,9 @@ bcd_backtrace_process(struct bcd_session *session)
 	bcd_error_t error;
 	size_t delta = 0;
 	ssize_t r;
+
+	if (bcd_request_handler(0, session) == -1)
+		return -1;
 
 	u.cargv[delta++] = strdup(bcd_config.invoke.path);
 

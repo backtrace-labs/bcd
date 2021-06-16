@@ -61,6 +61,7 @@ bcd_config_assign_from_v1(const void *cfv, struct bcd_error *e)
 	bcd_config.ipc.us.path = cf->ipc.us.path;
 	bcd_config.affinity.target_cpu = cf->affinity.target_cpu;
 	bcd_config.monitor_init = cf->monitor_init;
+	bcd_config.request_handler = cf->request_handler;
 	return 0;
 }
 
