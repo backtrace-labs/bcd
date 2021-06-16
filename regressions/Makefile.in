@@ -9,11 +9,14 @@ HEADERS=$(INCLUDE_DIR)/*.h $(INCLUDE_DIR)/internal/*.h
 
 CFLAGS=-Wall -O2 -pthread -ggdb -D_GNU_SOURCE -std=gnu99 -I$(INCLUDE_DIR) -lrt
 
-PROGRAMS=broad
+PROGRAMS=broad memfd
 
 all: $(PROGRAMS)
 
 broad : broad.c $(BUILD_DIR)/src/bcd-amalgamated.c
+	$(CC) -o $@ $^ $(CFLAGS)
+
+memfd : memfd.c $(BUILD_DIR)/src/bcd-amalgamated.c
 	$(CC) -o $@ $^ $(CFLAGS)
 
 distribution: clean
