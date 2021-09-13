@@ -184,6 +184,8 @@ struct bcd_config {
 			/*
 			 * The path to the UNIX socket. If NULL, will evaluate
 			 * to /tmp/bcd.<pid>.
+			 *
+			 * On Linux, start the path with '@' to use an abstract socket.
 			 */
 			const char *path;
 		} us;

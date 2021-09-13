@@ -294,8 +294,13 @@ bcd_error_errno(const struct bcd_error *const e)
 static void
 bcd_child_exit(int e)
 {
-
-	unlink(bcd_config.ipc.us.path);
+	/* On Linux we use '@' to specify an abstract socket.
+	 * They aren't on the filesystem so they can't be unlinked.
+	 */
+#ifdef __linux__
+	if (bcd_config.ipc.us.path[0] != '@')
+#endif
+		unlink(bcd_config.ipc.us.path);
 
 	if (unlink_directory != NULL)
 		rmdir(unlink_directory);
@@ -1737,6 +1742,12 @@ bcd_attach(struct bcd *bcd, bcd_error_t *error)
 	memset(&un, 0, sizeof un);
 	strlcpy(un.sun_path, pcb.sb.path, sizeof un.sun_path);
 	un.sun_family = AF_UNIX;
+        /* Designate usage of an abstract socket on Linux with @ */
+#ifdef __linux__
+        if (un.sun_path[0] == '@') {
+                un.sun_path[0] = '\0';
+        }
+#endif
 
 	for (;;) {
 		int cr = connect(fd, (struct sockaddr *)&un, addrlen);

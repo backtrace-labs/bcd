@@ -378,8 +378,12 @@ bcd_io_listener_unix(const char *path, int backlog, bcd_error_t *error)
 
 	if (listener == NULL)
 		return NULL;
-
+#ifdef __linux__
+	/* Abstract sockets aren't on the filesystem so they don't need to be full paths */
+	if (*path != '@' && *path != '/') {
+#else
 	if (*path != '/') {
+#endif
 		bcd_error_set(error, 0, "listener requires full path");
 		goto error;
 	}
@@ -399,7 +403,13 @@ bcd_io_listener_unix(const char *path, int backlog, bcd_error_t *error)
 	if (listener->fd == -1)
 		goto error;
 
+	/* Using @ as the first character of the path indicates an abstract socket on Linux */
+	/* These aren't on the filesystem so they can't be unlinked. */
+#ifdef __linux__
+	if (path[0] != '@' && unlink(path) == -1 && errno != ENOENT) {
+#else
 	if (unlink(path) == -1 && errno != ENOENT) {
+#endif
 		bcd_error_set(error, errno, "failed to initialize UNIX socket");
 		goto error;
 	}
@@ -407,6 +417,11 @@ bcd_io_listener_unix(const char *path, int backlog, bcd_error_t *error)
 	memset(&un, 0, sizeof un);
 	strcpy(un.sun_path, path);
 	un.sun_family = AF_UNIX;
+#ifdef __linux__
+        if (un.sun_path[0] == '@') {
+                un.sun_path[0] = '\0';
+        }
+#endif
 
 	if (bind(listener->fd, (struct sockaddr *)&un, sizeof un) == -1) {
 		bcd_error_set(error, errno, "failed to bind to socket");
