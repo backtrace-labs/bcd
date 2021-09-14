@@ -830,7 +830,11 @@ vfork_tracer(char **argv)
 
 	tracer_pid = vfork();
 	if (tracer_pid == 0) {
-		if (execve(bcd_config.invoke.path, argv, NULL) == -1)
+		char* const empty_env[] = {NULL};
+		char* const * envp = empty_env;
+		if (bcd_config.flags & BCD_CONFIG_F_TRACERINHERITENV)
+			envp = environ;
+		if (execve(bcd_config.invoke.path, argv, envp) == -1)
 			_exit(EXIT_FAILURE);
 	}
 
