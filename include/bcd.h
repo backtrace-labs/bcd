@@ -89,6 +89,8 @@ typedef void bcd_error_handler_t(enum bcd_event, pid_t, pid_t, const char *, int
 
 /* Set a unique command name for the monitor process. */
 #define BCD_CONFIG_F_SETCOMM (1UL << 0)
+/* Allow the tracer process to inherit the environment. */
+#define BCD_CONFIG_F_TRACERINHERITENV (1UL << 1)
 
 /*
  * First chance handler in BCD, invoked in the context of the BCD worker
