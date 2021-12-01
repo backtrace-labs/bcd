@@ -225,7 +225,7 @@ Aborted (core dumped)
 ```
 
 You must include the path to `libbcd_preload.so` in `LD_PRELOAD` environment
-variable and set the `BCD_PRELOAD` environment variable to `1` to enale
+variable and set the `BCD_PRELOAD` environment variable to `1` to enable
 preloading.
 
 The following environment variables can be used to tune BCD configuration:
