@@ -980,7 +980,7 @@ static int
 bcd_request_handler(pid_t tid, struct bcd_session *session)
 {
 
-	if (tid == 0)
+	if (tid == 0 && session != NULL)
 		tid = session->tid;
 
 	if (bcd_config.request_handler != NULL &&
