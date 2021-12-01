@@ -56,7 +56,7 @@ request(pid_t tid)
 }
 
 int
-main(void)
+main(int argc, char **argv)
 {
 	bcd_t bcd;
 	bcd_error_t e;
@@ -74,6 +74,9 @@ main(void)
 	cf.invoke.output_file = "bcd_output_file";
 	cf.flags |= BCD_CONFIG_F_SETCOMM;
 	cf.request_handler = request;
+	if (argc > 1) {
+		cf.ipc.us.path = argv[1];
+	}
 
 	if (bcd_init(&cf, &e) == -1) {
 		fprintf(stderr, "error: failed to init: %s (%s)\n",
