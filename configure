@@ -34,7 +34,7 @@ WANT_PIC=yes
 
 P_PWD=`pwd`
 MAINTAINER='sbahra@backtrace.io'
-VERSION=${VERSION:-'1.2'}
+VERSION=${VERSION:-'1.3'}
 VERSION_MAJOR='0'
 BUILD="$PWD/build/bcd.build"
 PREFIX=${PREFIX:-"/usr/local"}
