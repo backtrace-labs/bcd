@@ -204,7 +204,9 @@ bcd_default_signal_handler_raise(int s, siginfo_t *si, void *unused)
 }
 
 int
-bcd_sigaction(void (*h)(int, siginfo_t *, void *), unsigned int flags)
+bcd_sigaction_internal(void (*h)(int, siginfo_t *, void *),
+    unsigned int flags, int (*sah)(int, const struct sigaction *,
+    struct sigaction *))
 {
 	int signals[] = {
 		SIGSEGV,
@@ -216,6 +218,9 @@ bcd_sigaction(void (*h)(int, siginfo_t *, void *), unsigned int flags)
 	};
 	struct sigaction sa;
 	size_t i;
+
+	if (sah == NULL)
+		sah = sigaction;
 
 	if (h != NULL) {
 		sa.sa_sigaction = h;
@@ -229,11 +234,18 @@ bcd_sigaction(void (*h)(int, siginfo_t *, void *), unsigned int flags)
 	sa.sa_flags = SA_SIGINFO | SA_ONSTACK;
 
 	for (i = 0; i < sizeof(signals) / sizeof(*signals); i++) {
-		if (sigaction(signals[i], &sa, NULL) == -1)
+		if (sah(signals[i], &sa, NULL) == -1)
 			return signals[i];
 	}
 
 	return 0;
+}
+
+int
+bcd_sigaction(void (*h)(int, siginfo_t *, void *), unsigned int flags)
+{
+
+	return bcd_sigaction_internal(h, flags, NULL);
 }
 
 static void

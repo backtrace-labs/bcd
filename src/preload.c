@@ -11,6 +11,61 @@
 #endif /* !BCD_AMALGAMATED */
 
 #ifdef BCD_F_PRELOAD
+#include <dlfcn.h>
+
+static __sighandler_t (*real_signal)(int, __sighandler_t);
+static int (*real_sigaction)(int, const struct sigaction *,
+    struct sigaction *);
+
+static sig_atomic_t signal_override = 0;
+
+static int
+handled(const int s)
+{
+	static int ignore_signals[] = {
+	    SIGSEGV,
+	    SIGFPE,
+	    SIGABRT,
+	    SIGBUS,
+	    SIGILL,
+	    SIGFPE
+	};
+	size_t i;
+
+	for (i = 0; i < sizeof(ignore_signals) /
+	    sizeof(*ignore_signals); i++) {
+		if (ignore_signals[i] == s)
+			return 1;
+	}
+
+	return 0;
+}
+
+__sighandler_t
+signal(int signum, __sighandler_t handler)
+{
+
+	if (handled(signum) == 1 && signal_override == 1) {
+		fprintf(stderr, "[BCD] Ignoring signal %d\n", signum);
+		return NULL;
+	}
+
+	return real_signal(signum, handler);
+}
+
+int
+sigaction(int signum, const struct sigaction *act,
+    struct sigaction *oldact)
+{
+
+	if (handled(signum) == 1 && signal_override == 1) {
+		fprintf(stderr, "[BCD] Ignoring sigaction %d\n", signum);
+		return 0;
+	}
+
+	return real_sigaction(signum, act, oldact);
+}
+
 static void
 string_from_env(const char **output, const char *variable)
 {
@@ -63,11 +118,22 @@ bcd_preload(void)
 	bcd_t bcd;
 	const char *enabled = getenv("BCD_PRELOAD");
 	const char *reraise = getenv("BCD_RAISE");
+	const char *override = getenv("BCD_SIGNAL_OVERRIDE");
+	void *p;
 	unsigned int flags = 0;
 	int r;
 
+	p = dlsym(RTLD_NEXT, "signal");
+	real_signal = p;
+
+	p = dlsym(RTLD_NEXT, "sigaction");
+	real_sigaction = p;
+
 	if (enabled == NULL)
 		return;
+
+	if (override != NULL && strcmp(override, "1") == 0)
+		signal_override = 1;
 
 	if (prctl(PR_SET_PTRACER, PR_SET_PTRACER_ANY, 0, 0, 0) == -1)
 		perror("prctl");
@@ -91,7 +157,7 @@ bcd_preload(void)
 	if (reraise != NULL && strcmp(reraise, "1") == 0)
 		flags |= BCD_SIGACTION_RAISE;
 
-	r = bcd_sigaction(NULL, flags);
+	r = bcd_sigaction_internal(NULL, flags, real_sigaction);
 	if (r != 0) {
 		fprintf(stderr, "[BCD] failed to register handler for %d: %d\n",
 		    r, errno);

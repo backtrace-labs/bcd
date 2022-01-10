@@ -314,6 +314,14 @@ void bcd_reap(void);
  */
 int bcd_sigaction(void (*handler)(int, siginfo_t *, void *), unsigned int flags);
 
+/*
+ * Not to be used externally. This is a variant for use by the preload
+ * library.
+ */
+int bcd_sigaction_internal(void (*handler)(int, siginfo_t *, void *),
+    unsigned int flags, int (*)(int, const struct sigaction *,
+    struct sigaction *));
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

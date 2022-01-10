@@ -29,7 +29,7 @@ libbcd.so: $(OBJECTS)
 	$(LD) $(LDFLAGS) -o $(TARGET_DIR)/libbcd.so $(OBJECTS)
 
 libbcd_preload.so: $(OBJECTS) preload.o
-	$(LD) $(LDFLAGS_PRELOAD) -o $(TARGET_DIR)/libbcd_preload.so $(OBJECTS) preload.o
+	$(LD) $(LDFLAGS_PRELOAD) -o $(TARGET_DIR)/libbcd_preload.so $(OBJECTS) preload.o -ldl
 
 libbcd.a: $(OBJECTS)
 	ar rcs $(TARGET_DIR)/libbcd.a $(OBJECTS)
