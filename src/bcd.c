@@ -928,8 +928,13 @@ bcd_execve(struct bcd_session *session, char **argv, size_t fr)
 		 */
 		if (signal_check(&sig) == 0) {
 			sig = sigtimedwait(&interestset, NULL, &timeout);
-			if (sig <= 0)
-				signal_check(&sig);
+			if (sig <= 0) {
+				int e = errno;
+				if (signal_check(&sig) == 0
+				  && (e == EINTR || e == EAGAIN)) {
+				  continue;
+				}
+			}
 		}
 
 		switch (sig) {
