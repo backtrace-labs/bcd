@@ -14,15 +14,32 @@
 #ifdef BCD_F_PRELOAD
 #include <dlfcn.h>
 
+extern void (*bcd_pre_trace)(int, siginfo_t *);
+extern void (*bcd_post_trace)(int, siginfo_t *);
+
 static __sighandler_t (*real_signal)(int, __sighandler_t);
 static int (*real_sigaction)(int, const struct sigaction *,
     struct sigaction *);
+
+typedef void libc_sigaction_handler(int, siginfo_t *, void *);
+struct registered_sighand {
+	int signum;
+	struct sigaction sa;
+};
+
+/* Maximum number of registered signal handlers. */
+#define	MAX_REGISTERED_SIGHAND	16
+
+static sig_atomic_t n_registered_sighand;
+static struct registered_sighand registered_sighands[MAX_REGISTERED_SIGHAND];
 
 /*
  * Defines behavior for handling other signal handlers:
  * - -1: uninitialized state.
  * - 0 [default]: Allow replacing of libbcd handlers.
  * - 1: Ignore other handlers entirely.
+ * - 2: Invoke them after invoking ptrace.
+ * - 3: Invoke them before invoking ptrace.
  */
 static sig_atomic_t signal_override = -1;
 
@@ -54,13 +71,58 @@ handled(const int s)
 	return h;
 }
 
+static void
+register_sighand(int signum, const struct sigaction *sa)
+{
+	struct registered_sighand *sh;
+	void *handler = sa->sa_handler;
+
+	if (n_registered_sighand == MAX_REGISTERED_SIGHAND) {
+		fprintf(stderr, "[BCD] Registered signal handler limit exceeded\n");
+		return;
+	}
+
+	if (sa->sa_flags & SA_SIGINFO)
+		handler = sa->sa_sigaction;
+
+	fprintf(stderr, "[BCD] Registered signal handler %p for signal %d\n",
+	    handler, signum);
+	sh = &registered_sighands[n_registered_sighand];
+	sh->signum = signum;
+	sh->sa = *sa;
+	n_registered_sighand++;
+	return;
+}
+
+static void
+registered_sighand_invoke(int signo, siginfo_t *si)
+{
+
+	for (int i = 0; i < n_registered_sighand; i++) {
+		struct registered_sighand *sh = &registered_sighands[i];
+
+		if (sh->signum != signo)
+			continue;
+
+		if (sh->sa.sa_flags & SA_SIGINFO)
+			sh->sa.sa_sigaction(signo, si, NULL);
+		else
+			sh->sa.sa_handler(signo);
+	}
+	return;
+}
+
 __sighandler_t
 signal(int signum, __sighandler_t handler)
 {
+	struct sigaction sa;
 
 	if (handled(signum) == false)
 		return real_signal(signum, handler);
 
+	memset(&sa, 0, sizeof(sa));
+	sa.sa_handler = handler;
+	register_sighand(signum, &sa);
 	return NULL;
 }
 
@@ -71,6 +133,7 @@ sigaction(int signum, const struct sigaction *sa, struct sigaction *oldsa)
 	if (handled(signum) == false)
 		return real_sigaction(signum, sa, oldsa);
 
+	register_sighand(signum, sa);
 	return 0;
 }
 
@@ -149,6 +212,16 @@ bcd_preload(void)
 			break;
 		case 1:
 			fprintf(stderr, "[BCD] Ignoring external signal handlers\n");
+			break;
+		case 2:
+			fprintf(stderr, "[BCD] Will invoke external signal "
+			    "handlers before tracing\n");
+			bcd_post_trace = registered_sighand_invoke;
+			break;
+		case 3:
+			fprintf(stderr, "[BCD] Will invoke external signal "
+			    "handlers after tracing\n");
+			bcd_pre_trace = registered_sighand_invoke;
 			break;
 		default:
 			fprintf(stderr, "[BCD] Ignoring invalid "
