@@ -1,6 +1,7 @@
 #include <errno.h>
 #include <stdio.h>
 #include <signal.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -17,9 +18,15 @@ static __sighandler_t (*real_signal)(int, __sighandler_t);
 static int (*real_sigaction)(int, const struct sigaction *,
     struct sigaction *);
 
-static sig_atomic_t signal_override = 0;
+/*
+ * Defines behavior for handling other signal handlers:
+ * - -1: uninitialized state.
+ * - 0 [default]: Allow replacing of libbcd handlers.
+ * - 1: Ignore other handlers entirely.
+ */
+static sig_atomic_t signal_override = -1;
 
-static int
+static bool
 handled(const int s)
 {
 	static int ignore_signals[] = {
@@ -31,39 +38,40 @@ handled(const int s)
 	    SIGFPE
 	};
 	size_t i;
+	bool h = false;
 
-	for (i = 0; i < sizeof(ignore_signals) /
+	if (signal_override == 0)
+		return false;
+
+	for (i = 0; h == false && i < sizeof(ignore_signals) /
 	    sizeof(*ignore_signals); i++) {
-		if (ignore_signals[i] == s)
-			return 1;
+		h = ignore_signals[i] == s;
 	}
 
-	return 0;
+	if (h == true && signal_override == 1)
+		fprintf(stderr, "[BCD] Ignoring handler for signal %d\n", s);
+
+	return h;
 }
 
 __sighandler_t
 signal(int signum, __sighandler_t handler)
 {
 
-	if (handled(signum) == 1 && signal_override == 1) {
-		fprintf(stderr, "[BCD] Ignoring signal %d\n", signum);
-		return NULL;
-	}
+	if (handled(signum) == false)
+		return real_signal(signum, handler);
 
-	return real_signal(signum, handler);
+	return NULL;
 }
 
 int
-sigaction(int signum, const struct sigaction *act,
-    struct sigaction *oldact)
+sigaction(int signum, const struct sigaction *sa, struct sigaction *oldsa)
 {
 
-	if (handled(signum) == 1 && signal_override == 1) {
-		fprintf(stderr, "[BCD] Ignoring sigaction %d\n", signum);
-		return 0;
-	}
+	if (handled(signum) == false)
+		return real_sigaction(signum, sa, oldsa);
 
-	return real_sigaction(signum, act, oldact);
+	return 0;
 }
 
 static void
@@ -132,8 +140,25 @@ bcd_preload(void)
 	if (enabled == NULL)
 		return;
 
-	if (override != NULL && strcmp(override, "1") == 0)
-		signal_override = 1;
+	if (override != NULL) {
+		if (override[0] != '\0' && override[1] == '\0')
+			signal_override = override[0] - '0';
+
+		switch (signal_override) {
+		case 0:
+			break;
+		case 1:
+			fprintf(stderr, "[BCD] Ignoring external signal handlers\n");
+			break;
+		default:
+			fprintf(stderr, "[BCD] Ignoring invalid "
+			    "BCD_SIGNAL_OVERRIDE='%s'\n", override);
+			signal_override = 0;
+			break;
+		}
+	}
+	if (signal_override < 0)
+		signal_override = 0;
 
 	if (prctl(PR_SET_PTRACER, PR_SET_PTRACER_ANY, 0, 0, 0) == -1)
 		perror("prctl");
