@@ -1,6 +1,7 @@
 #include <errno.h>
 #include <stdio.h>
 #include <signal.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -13,13 +14,36 @@
 #ifdef BCD_F_PRELOAD
 #include <dlfcn.h>
 
+extern void (*bcd_pre_trace)(int, siginfo_t *);
+extern void (*bcd_post_trace)(int, siginfo_t *);
+
 static __sighandler_t (*real_signal)(int, __sighandler_t);
 static int (*real_sigaction)(int, const struct sigaction *,
     struct sigaction *);
 
-static sig_atomic_t signal_override = 0;
+typedef void libc_sigaction_handler(int, siginfo_t *, void *);
+struct registered_sighand {
+	int signum;
+	struct sigaction sa;
+};
 
-static int
+/* Maximum number of registered signal handlers. */
+#define	MAX_REGISTERED_SIGHAND	16
+
+static sig_atomic_t n_registered_sighand;
+static struct registered_sighand registered_sighands[MAX_REGISTERED_SIGHAND];
+
+/*
+ * Defines behavior for handling other signal handlers:
+ * - -1: uninitialized state.
+ * - 0 [default]: Allow replacing of libbcd handlers.
+ * - 1: Ignore other handlers entirely.
+ * - 2: Invoke them after invoking ptrace.
+ * - 3: Invoke them before invoking ptrace.
+ */
+static sig_atomic_t signal_override = -1;
+
+static bool
 handled(const int s)
 {
 	static int ignore_signals[] = {
@@ -31,39 +55,86 @@ handled(const int s)
 	    SIGFPE
 	};
 	size_t i;
+	bool h = false;
 
-	for (i = 0; i < sizeof(ignore_signals) /
+	if (signal_override == 0)
+		return false;
+
+	for (i = 0; h == false && i < sizeof(ignore_signals) /
 	    sizeof(*ignore_signals); i++) {
-		if (ignore_signals[i] == s)
-			return 1;
+		h = ignore_signals[i] == s;
 	}
 
-	return 0;
+	if (h == true && signal_override == 1)
+		fprintf(stderr, "[BCD] Ignoring handler for signal %d\n", s);
+
+	return h;
+}
+
+static void
+register_sighand(int signum, const struct sigaction *sa)
+{
+	struct registered_sighand *sh;
+	void *handler = sa->sa_handler;
+
+	if (n_registered_sighand == MAX_REGISTERED_SIGHAND) {
+		fprintf(stderr, "[BCD] Registered signal handler limit exceeded\n");
+		return;
+	}
+
+	if (sa->sa_flags & SA_SIGINFO)
+		handler = sa->sa_sigaction;
+
+	fprintf(stderr, "[BCD] Registered signal handler %p for signal %d\n",
+	    handler, signum);
+	sh = &registered_sighands[n_registered_sighand];
+	sh->signum = signum;
+	sh->sa = *sa;
+	n_registered_sighand++;
+	return;
+}
+
+static void
+registered_sighand_invoke(int signo, siginfo_t *si)
+{
+
+	for (int i = 0; i < n_registered_sighand; i++) {
+		struct registered_sighand *sh = &registered_sighands[i];
+
+		if (sh->signum != signo)
+			continue;
+
+		if (sh->sa.sa_flags & SA_SIGINFO)
+			sh->sa.sa_sigaction(signo, si, NULL);
+		else
+			sh->sa.sa_handler(signo);
+	}
+	return;
 }
 
 __sighandler_t
 signal(int signum, __sighandler_t handler)
 {
+	struct sigaction sa;
 
-	if (handled(signum) == 1 && signal_override == 1) {
-		fprintf(stderr, "[BCD] Ignoring signal %d\n", signum);
-		return NULL;
-	}
+	if (handled(signum) == false)
+		return real_signal(signum, handler);
 
-	return real_signal(signum, handler);
+	memset(&sa, 0, sizeof(sa));
+	sa.sa_handler = handler;
+	register_sighand(signum, &sa);
+	return NULL;
 }
 
 int
-sigaction(int signum, const struct sigaction *act,
-    struct sigaction *oldact)
+sigaction(int signum, const struct sigaction *sa, struct sigaction *oldsa)
 {
 
-	if (handled(signum) == 1 && signal_override == 1) {
-		fprintf(stderr, "[BCD] Ignoring sigaction %d\n", signum);
-		return 0;
-	}
+	if (handled(signum) == false)
+		return real_sigaction(signum, sa, oldsa);
 
-	return real_sigaction(signum, act, oldact);
+	register_sighand(signum, sa);
+	return 0;
 }
 
 static void
@@ -132,8 +203,35 @@ bcd_preload(void)
 	if (enabled == NULL)
 		return;
 
-	if (override != NULL && strcmp(override, "1") == 0)
-		signal_override = 1;
+	if (override != NULL) {
+		if (override[0] != '\0' && override[1] == '\0')
+			signal_override = override[0] - '0';
+
+		switch (signal_override) {
+		case 0:
+			break;
+		case 1:
+			fprintf(stderr, "[BCD] Ignoring external signal handlers\n");
+			break;
+		case 2:
+			fprintf(stderr, "[BCD] Will invoke external signal "
+			    "handlers before tracing\n");
+			bcd_post_trace = registered_sighand_invoke;
+			break;
+		case 3:
+			fprintf(stderr, "[BCD] Will invoke external signal "
+			    "handlers after tracing\n");
+			bcd_pre_trace = registered_sighand_invoke;
+			break;
+		default:
+			fprintf(stderr, "[BCD] Ignoring invalid "
+			    "BCD_SIGNAL_OVERRIDE='%s'\n", override);
+			signal_override = 0;
+			break;
+		}
+	}
+	if (signal_override < 0)
+		signal_override = 0;
 
 	if (prctl(PR_SET_PTRACER, PR_SET_PTRACER_ANY, 0, 0, 0) == -1)
 		perror("prctl");

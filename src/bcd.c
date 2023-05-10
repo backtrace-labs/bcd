@@ -35,6 +35,9 @@
 #define BCD_MAGIC(N) \
 	bcd_MAGICAL_UNICORNS_##N
 
+void (*bcd_pre_trace)(int, siginfo_t *) = NULL;
+void (*bcd_post_trace)(int, siginfo_t *) = NULL;
+
 /*
  * Critical communication goes over the pipe, such as total program
  * failure events and early initialization.
@@ -186,7 +189,14 @@ bcd_default_signal_handler(int s, siginfo_t *si, void *unused)
 	(void)si;
 	(void)s;
 
+	if (bcd_pre_trace != NULL)
+		bcd_pre_trace(s, si);
+
 	bcd_fatal("Fatal signal received.");
+
+	if (bcd_post_trace != NULL)
+		bcd_post_trace(s, si);
+
 	_exit(EXIT_FAILURE);
 }
 
@@ -197,7 +207,13 @@ bcd_default_signal_handler_raise(int s, siginfo_t *si, void *unused)
 	(void)unused;
 	(void)si;
 
+	if (bcd_pre_trace != NULL)
+		bcd_pre_trace(s, si);
+
 	bcd_fatal("Fatal signal received.");
+
+	if (bcd_post_trace != NULL)
+		bcd_post_trace(s, si);
 
 	signal(s, SIG_DFL);
 	return;
