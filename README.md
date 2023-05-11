@@ -239,8 +239,10 @@ The following environment variables can be used to tune BCD configuration:
 BCD_INVOKE_OUTPUT_FILE: Specifies the output file for the BCD_INVOKE_PATH program.
              BCD_RAISE: Set to 1 if you wish to invoke the default handler after
                         bcd_fatal has completed.
-   BCD_SIGNAL_OVERRIDE: Set to 1 for BCD to ignore attempts to set conflicting
-                        signal handlers.
+   BCD_SIGNAL_OVERRIDE: Set to one of the following values:
+                        - 1: BCD will ignore attempts to set conflicting signal handlers.
+                        - 2: BCD will run additional signal handlers after invoking ptrace.
+                        - 3: BCD will run additional signal handlers before invoking ptrace.
 ```
 # Containers
 
