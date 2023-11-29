@@ -348,6 +348,7 @@ gettid(void)
 #endif /* __linux__ */
 
 #ifdef __linux__
+#if !defined(__GLIBC_PREREQ) || !__GLIBC_PREREQ(2, 38)
 static size_t
 strlcpy(char *dst, const char *src, size_t n)
 {
@@ -361,6 +362,7 @@ strlcpy(char *dst, const char *src, size_t n)
 
 	return len;
 }
+#endif /* !defined(__GLIBC_PREREQ) || !__GLIBC_PREREQ(2, 38) */
 #endif /* __linux__ */
 
 void
