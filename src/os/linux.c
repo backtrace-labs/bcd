@@ -68,7 +68,6 @@ bcd_os_oom_adjust(bcd_error_t *error)
 	char path[PATH_MAX];
 	pid_t pid = getpid();
 	const char *score = "-1000";
-	size_t score_length = strlen(score);
 	ssize_t ac = 0;
 	int r, fd, i;
 
@@ -97,7 +96,7 @@ bcd_os_oom_adjust(bcd_error_t *error)
 
 		break;
 	}
-
+	const size_t score_length = strlen(score);
 	do {
 		ssize_t wr = write(fd, score, score_length);
 
