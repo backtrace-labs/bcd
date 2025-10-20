@@ -1965,6 +1965,7 @@ bcd_init(const struct bcd_config *cf, bcd_error_t *error)
 	sb->monitor_pid = child;
 	bcd_pipe_ensure_readonly(&sb->monitor);
 	bcd_pipe_ensure_writeonly(&sb->master);
+	fcntl(sb->master.fd[1], F_SETFD, FD_CLOEXEC); // Make sure children don't keep the monitor process around
 
 	/*
 	 * After the child has spawned, wait for configuration information.
