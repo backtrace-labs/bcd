@@ -1882,7 +1882,7 @@ bcd_init(const struct bcd_config *cf, bcd_error_t *error)
 	time_t timeout_abstime;
 
 	if (cf == NULL) {
-		bcd_config_latest_version_t default_config;
+		bcd_config_latest_version_t default_config = {0};
 		bcd_error_t noerror;
 
 		ret = bcd_config_init_internal(
