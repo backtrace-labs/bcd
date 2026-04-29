@@ -675,8 +675,8 @@ bcd_kv_set(struct bcd_session *session, struct bcd_packet *packet)
 {
 	struct bcd_kv *kv, *previous;
 	const char *key = packet->payload;
-	const char *value;
-	char *stream, *e;
+	const char *value, *e;
+	char *stream;
 	size_t k_l, v_l;
 
 	if (*key == '\0')
